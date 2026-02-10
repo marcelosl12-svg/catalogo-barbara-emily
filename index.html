@@ -11,12 +11,22 @@ body{
   background:#fff0f5;
   margin:0;
 }
-header{
-  background:#e91e63;
+.topo{
+  background:#800000;
   color:#fff;
-  text-align:center;
-  padding:15px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:10px;
+  padding:12px;
   font-size:22px;
+}
+.topo img{
+  width:40px;
+  height:40px;
+  border-radius:50%;
+  object-fit:cover;
+  background:#fff;
 }
 .card{
   background:#fff;
@@ -51,23 +61,6 @@ header{
   text-decoration:none;
   font-weight:bold;
 }
-  .topo{
-  background:#800000;
-  color:#fff;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  gap:10px;
-  padding:12px;
-  font-size:22px;
-}
-.topo img{
-  width:40px;
-  height:40px;
-  border-radius:50%;
-  object-fit:cover;
-  background:#fff;
-}
 </style>
 </head>
 
@@ -78,15 +71,11 @@ header{
   <span>Catálogo Bárbara Emily</span>
 </header>
 
-
-
-<!-- ORDEM EXATA DO PDF -->
+<!-- MODELO DE CARD (repete para todos os produtos) -->
 
 <div class="card">
   <img src="imagens/1.jpg" alt="Hidratante Labial – Sarah’s Beauty">
-
   <h2>Hidratante Labial – Sarah’s Beauty</h2>
-
   <div class="price">R$ 6,50</div>
 
   <a class="btn"
@@ -98,3 +87,23 @@ header{
     Comprar no Instagram
   </a>
 </div>
+
+<div class="card">
+  <img src="imagens/2.jpg" alt="Candy Pop – Lua&Neve">
+  <h2>Candy Pop – Lua&Neve</h2>
+  <div class="price">R$ 8,00</div>
+
+  <a class="btn"
+     href="https://www.instagram.com/direct/new/?username=barbaraemilybe&text=Oi%20%F0%9F%98%8A%20vi%20esse%20produto%20no%20cat%C3%A1logo%20e%20gostaria%20de%20saber%20mais"
+     onclick="
+       window.location.href='instagram://direct/new?username=barbaraemilybe&text=Oi%20%F0%9F%98%8A%20vi%20esse%20produto%20no%20cat%C3%A1logo%20e%20gostaria%20de%20saber%20mais';
+       return false;
+     ">
+    Comprar no Instagram
+  </a>
+</div>
+
+<!-- Continue repetindo o mesmo padrão para os outros produtos -->
+
+</body>
+</html>
