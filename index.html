@@ -6,13 +6,14 @@
 <title>Catálogo Bárbara Emily</title>
 
 <style>
-body{
-  font-family: Arial, sans-serif;
-  background:#fff0f5;
-  margin:0;
-}
-.topo{
-  background:#800000;
+  body{
+    font-family: Arial, sans-serif;
+    background:#fff0f5;
+    margin:0;
+    padding-bottom: 20px; /* espaço pro carrinho fixo */
+  }
+  header{
+     background:#800000;
   color:#fff;
   display:flex;
   align-items:center;
@@ -20,47 +21,114 @@ body{
   gap:10px;
   padding:12px;
   font-size:22px;
-}
+  }
 .topo img{
-  width:40px;
+ width:40px;
   height:40px;
   border-radius:50%;
   object-fit:cover;
   background:#fff;
 }
-.card{
-  background:#fff;
-  margin:12px;
-  padding:12px;
-  border-radius:14px;
-  box-shadow:0 2px 6px rgba(0,0,0,.15);
-}
-.card img{
-  width:100%;
-  max-height:280px;
-  object-fit:contain;
-  border-radius:10px;
-}
-.card h2{
-  font-size:17px;
-  margin:8px 0 4px;
-}
-.price{
-  color:#61152e;
-  font-size:18px;
-  font-weight:bold;
-}
-.btn{
-  display:block;
-  margin-top:10px;
-  padding:10px;
-  text-align:center;
-  background:#800000;
-  color:#fff;
-  border-radius:8px;
-  text-decoration:none;
-  font-weight:bold;
-}
+
+  .card{
+    background:#fff;
+    margin:12px;
+    padding:12px;
+    border-radius:14px;
+    box-shadow:0 2px 6px rgba(0,0,0,.15);
+  }
+  .card img{
+    width:100%;
+    max-height:280px;
+    object-fit:contain;
+    border-radius:10px;
+  }
+  .card h2{
+    font-size:17px;
+    margin:8px 0 4px;
+  }
+  .price{
+    color:#e91e63;
+    font-size:18px;
+    font-weight:bold;
+  }
+
+  /* Botão padrão */
+  .btn{
+    display:block;
+    margin-top:10px;
+    padding:10px;
+    text-align:center;
+    background:#833ab4;
+    color:#fff;
+    border-radius:8px;
+    text-decoration:none;
+    font-weight:bold;
+    border: none;
+    width: 100%;
+    cursor: pointer;
+  }
+  .btn:active{ transform: translateY(1px); }
+
+  /* Carrinho fixo */
+  .cart{
+    position:fixed;
+    bottom:0;
+    left:0;
+    right:0;
+    background:#fff;
+    border-top: 1px solid rgba(0,0,0,.12);
+    box-shadow:0 -2px 10px rgba(0,0,0,.12);
+    padding:10px 12px;
+    z-index: 10;
+  }
+  .cart-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    flex-wrap: wrap;
+  }
+  .cart-title{ font-weight: bold; }
+  .cart-total{
+    font-weight:bold;
+    color:#e91e63;
+  }
+  .cart-list{
+    margin:8px 0 10px;
+    padding-left:18px;
+    max-height:70px;
+    overflow:auto;
+  }
+  .cart-actions{
+    display:flex;
+    gap:8px;
+    flex-wrap: wrap;
+  }
+  .btn-secondary{
+    background:#444;
+  }
+  .btn-light{
+    background:#f2f2f2;
+    color:#111;
+    border: 1px solid #ddd;
+  }
+  textarea{
+    width:100%;
+    height:80px;
+    border-radius:10px;
+    border:1px solid #c71212;
+    padding:10px;
+    resize:none;
+    box-sizing:border-box;
+    margin-top:8px;
+    font-family: Arial, sans-serif;
+  }
+  .hint{
+    font-size:12px;
+    opacity:.8;
+    margin-top:6px;
+  }
 </style>
 </head>
 
@@ -71,82 +139,149 @@ body{
   <span>Catálogo Bárbara Emily</span>
 </header>
 
-<!-- MODELO DE CARD (repete para todos os produtos) -->
+<!-- PRODUTOS (ordem do PDF / imagens 1.jpg ... 30.jpg) -->
+<div class="card"><img src="imagens/1.jpg"  alt="Hidratante Labial – Sarah’s Beauty"><h2>Hidratante Labial – Sarah’s Beauty</h2><div class="price">R$ 6,50</div><button class="btn" onclick="adicionar('Hidratante Labial – Sarah’s Beauty', 6.50)">Adicionar ao carrinho</button></div>
+<div class="card"><img src="imagens/2.jpg"  alt="Candy Pop – Lua&Neve"><h2>Candy Pop – Lua&Neve</h2><div class="price">R$ 8,00</div><button class="btn" onclick="adicionar('Candy Pop – Lua&Neve', 8.00)">Adicionar ao carrinho</button></div>
+<div class="card"><img src="imagens/3.jpg"  alt="Lip Balm Bastão – 4 Angel"><h2>Lip Balm Bastão – 4 Angel</h2><div class="price">R$ 18,90</div><button class="btn" onclick="adicionar('Lip Balm Bastão – 4 Angel', 18.90)">Adicionar ao carrinho</button></div>
+<div class="card"><img src="imagens/4.jpg"  alt="Lip Gloss – Belle Angel"><h2>Lip Gloss – Belle Angel</h2><div class="price">R$ 10,00</div><button class="btn" onclick="adicionar('Lip Gloss – Belle Angel', 10.00)">Adicionar ao carrinho</button></div>
+<div class="card"><img src="imagens/5.jpg"  alt="Choco Fun Lip Gloss – Fenzza"><h2>Choco Fun Lip Gloss – Fenzza</h2><div class="price">R$ 16,80</div><button class="btn" onclick="adicionar('Choco Fun Lip Gloss – Fenzza', 16.80)">Adicionar ao carrinho</button></div>
+<div class="card"><img src="imagens/6.jpg"  alt="Batom Líquido Matte – Lua&Neve"><h2>Batom Líquido Matte – Lua&Neve</h2><div class="price">R$ 14,00</div><button class="btn" onclick="adicionar('Batom Líquido Matte – Lua&Neve', 14.00)">Adicionar ao carrinho</button></div>
+<div class="card"><img src="imagens/7.jpg"  alt="Lápis Labial – Luisance"><h2>Lápis Labial – Luisance</h2><div class="price">R$ 5,60</div><button class="btn" onclick="adicionar('Lápis Labial – Luisance', 5.60)">Adicionar ao carrinho</button></div>
+<div class="card"><img src="imagens/8.jpg"  alt="Blush – Belle Angel"><h2>Blush – Belle Angel</h2><div class="price">R$ 15,80</div><button class="btn" onclick="adicionar('Blush – Belle Angel', 15.80)">Adicionar ao carrinho</button></div>
+<div class="card"><img src="imagens/9.jpg"  alt="Blush Glossy – SP Colors"><h2>Blush Glossy – SP Colors</h2><div class="price">R$ 10,00</div><button class="btn" onclick="adicionar('Blush Glossy – SP Colors', 10.00)">Adicionar ao carrinho</button></div>
+<div class="card"><img src="imagens/10.jpg" alt="Blush Jelly – 4 Angel"><h2>Blush Jelly – 4 Angel</h2><div class="price">R$ 16,90</div><button class="btn" onclick="adicionar('Blush Jelly – 4 Angel', 16.90)">Adicionar ao carrinho</button></div>
+<div class="card"><img src="imagens/11.jpg" alt="Paleta de Blush – Hello Mini"><h2>Paleta de Blush – Hello Mini</h2><div class="price">R$ 20,00</div><button class="btn" onclick="adicionar('Paleta de Blush – Hello Mini', 20.00)">Adicionar ao carrinho</button></div>
+<div class="card"><img src="imagens/12.jpg" alt="Iluminador – Pink21"><h2>Iluminador – Pink21</h2><div class="price">R$ 14,00</div><button class="btn" onclick="adicionar('Iluminador – Pink21', 14.00)">Adicionar ao carrinho</button></div>
+<div class="card"><img src="imagens/13.jpg" alt="Iluminador – Hudamoji"><h2>Iluminador – Hudamoji</h2><div class="price">R$ 12,00</div><button class="btn" onclick="adicionar('Iluminador – Hudamoji', 12.00)">Adicionar ao carrinho</button></div>
+<div class="card"><img src="imagens/14.jpg" alt="Rímel – Maishaini"><h2>Rímel – Maishaini</h2><div class="price">R$ 12,95</div><button class="btn" onclick="adicionar('Rímel – Maishaini', 12.95)">Adicionar ao carrinho</button></div>
+<div class="card"><img src="imagens/15.jpg" alt="Rímel – Hello Mini"><h2>Rímel – Hello Mini</h2><div class="price">R$ 20,00</div><button class="btn" onclick="adicionar('Rímel – Hello Mini', 20.00)">Adicionar ao carrinho</button></div>
+<div class="card"><img src="imagens/16.jpg" alt="Lápis Preto – Max Love"><h2>Lápis Preto – Max Love</h2><div class="price">R$ 3,50</div><button class="btn" onclick="adicionar('Lápis Preto – Max Love', 3.50)">Adicionar ao carrinho</button></div>
+<div class="card"><img src="imagens/17.jpg" alt="Lápis Marrom – Hudamoji"><h2>Lápis Marrom – Hudamoji</h2><div class="price">R$ 3,75</div><button class="btn" onclick="adicionar('Lápis Marrom – Hudamoji', 3.75)">Adicionar ao carrinho</button></div>
+<div class="card"><img src="imagens/18.jpg" alt="Caneta Delineadora – Lua&Neve"><h2>Caneta Delineadora – Lua&Neve</h2><div class="price">R$ 7,00</div><button class="btn" onclick="adicionar('Caneta Delineadora – Lua&Neve', 7.00)">Adicionar ao carrinho</button></div>
+<div class="card"><img src="imagens/19.jpg" alt="Delineador Ultra Black – Vivai"><h2>Delineador Ultra Black – Vivai</h2><div class="price">R$ 6,50</div><button class="btn" onclick="adicionar('Delineador Ultra Black – Vivai', 6.50)">Adicionar ao carrinho</button></div>
+<div class="card"><img src="imagens/20.jpg" alt="Pó Compacto – Swiss Beauty"><h2>Pó Compacto – Swiss Beauty</h2><div class="price">R$ 8,00</div><button class="btn" onclick="adicionar('Pó Compacto – Swiss Beauty', 8.00)">Adicionar ao carrinho</button></div>
+<div class="card"><img src="imagens/21.jpg" alt="Pó Banana – Pop"><h2>Pó Banana – Pop</h2><div class="price">R$ 11,00</div><button class="btn" onclick="adicionar('Pó Banana – Pop', 11.00)">Adicionar ao carrinho</button></div>
+<div class="card"><img src="imagens/22.jpg" alt="Pó Solto – Lady Beauty"><h2>Pó Solto – Lady Beauty</h2><div class="price">R$ 11,00</div><button class="btn" onclick="adicionar('Pó Solto – Lady Beauty', 11.00)">Adicionar ao carrinho</button></div>
+<div class="card"><img src="imagens/23.jpg" alt="Esponja de Maquiagem – Lua&Neve"><h2>Esponja de Maquiagem – Lua&Neve</h2><div class="price">R$ 8,00</div><button class="btn" onclick="adicionar('Esponja de Maquiagem – Lua&Neve', 8.00)">Adicionar ao carrinho</button></div>
+<div class="card"><img src="imagens/24.jpg" alt="Pincel para Sobrancelha – Maishaini"><h2>Pincel para Sobrancelha – Maishaini</h2><div class="price">R$ 7,00</div><button class="btn" onclick="adicionar('Pincel para Sobrancelha – Maishaini', 7.00)">Adicionar ao carrinho</button></div>
+<div class="card"><img src="imagens/25.jpg" alt="Iluminador – Sarah’s Beauty"><h2>Iluminador – Sarah’s Beauty</h2><div class="price">R$ 14,00</div><button class="btn" onclick="adicionar('Iluminador – Sarah’s Beauty', 14.00)">Adicionar ao carrinho</button></div>
+<div class="card"><img src="imagens/26.jpg" alt="Iluminador Coração – Hudamoji"><h2>Iluminador Coração – Hudamoji</h2><div class="price">R$ 14,00</div><button class="btn" onclick="adicionar('Iluminador Coração – Hudamoji', 14.00)">Adicionar ao carrinho</button></div>
+<div class="card"><img src="imagens/27.jpg" alt="Sombra Líquida – Magic Look"><h2>Sombra Líquida – Magic Look</h2><div class="price">R$ 8,00</div><button class="btn" onclick="adicionar('Sombra Líquida – Magic Look', 8.00)">Adicionar ao carrinho</button></div>
+<div class="card"><img src="imagens/28.jpg" alt="Rímel – Miss Rôse"><h2>Rímel – Miss Rôse</h2><div class="price">R$ 17,80</div><button class="btn" onclick="adicionar('Rímel – Miss Rôse', 17.80)">Adicionar ao carrinho</button></div>
+<div class="card"><img src="imagens/29.jpg" alt="Sabonete Primer Pré-Maquiagem – Derma Chem"><h2>Sabonete Primer Pré-Maquiagem – Derma Chem</h2><div class="price">R$ 15,95</div><button class="btn" onclick="adicionar('Sabonete Primer Pré-Maquiagem – Derma Chem', 15.95)">Adicionar ao carrinho</button></div>
+<div class="card"><img src="imagens/30.jpg" alt="Lenço Umedecido – Fenzza"><h2>Lenço Umedecido – Fenzza</h2><div class="price">R$ 12,00</div><button class="btn" onclick="adicionar('Lenço Umedecido – Fenzza', 12.00)">Adicionar ao carrinho</button></div>
 
-<button onclick="adicionar('Hidratante Labial – Sarah’s Beauty', 6.50)" class="btn">
-  Adicionar ao carrinho
-</button>
+<!-- CARRINHO FIXO -->
+<div class="cart">
+  <div class="cart-row">
+    <div class="cart-title">Carrinho</div>
+    <div>Total: R$ <span class="cart-total" id="total">0.00</span></div>
+  </div>
 
-<div class="card">
-  <img src="imagens/2.jpg" alt="Candy Pop – Lua&Neve">
-  <h2>Candy Pop – Lua&Neve</h2>
-  <div class="price">R$ 8,00</div>
+  <ul class="cart-list" id="listaCarrinho"></ul>
 
-<a class="btn"
-   href="https://www.instagram.com/direct/t/17843307633580771/"
-   target="_blank" rel="noopener">
-  💬 Falar com a loja
-</a>
+  <div class="cart-actions">
+    <button class="btn" onclick="gerarPedido()">Gerar pedido (copiar)</button>
+    <button class="btn btn-light" onclick="copiarPedido()">Copiar pedido</button>
+    <button class="btn btn-secondary" onclick="limparCarrinho()">Limpar carrinho</button>
+    <a class="btn btn-light" href="https://ig.me/m/barbaraemilybe/" target="_blank" rel="noopener">Abrir Instagram da loja</a>
+  </div>
 
+  <textarea id="resumoPedido" readonly placeholder="Clique em 'Gerar pedido (copiar)' para montar o texto do pedido..."></textarea>
+  <div class="hint">Depois de copiar, abra o Instagram e cole no Direct da loja.</div>
 </div>
 
-<!-- Continue repetindo o mesmo padrão para os outros produtos -->
 <script>
-let carrinho = [];
+  // Carrinho simples (sem backend)
+  let carrinho = [];
 
-function adicionar(nome, preco){
-  carrinho.push({nome, preco});
-  atualizarCarrinho();
-}
-
-function atualizarCarrinho(){
-  let lista = document.getElementById("listaCarrinho");
-  let total = 0;
-  lista.innerHTML = "";
-
-  carrinho.forEach(item=>{
-    total += item.preco;
-    lista.innerHTML += `<li>${item.nome} - R$ ${item.preco.toFixed(2)}</li>`;
-  });
-
-  document.getElementById("total").innerText = total.toFixed(2);
-}
-
-function finalizarPedido(){
-  if(carrinho.length === 0){
-    alert("Carrinho vazio");
-    return;
+  function adicionar(nome, preco){
+    carrinho.push({nome, preco});
+    atualizarCarrinho();
   }
 
-  let mensagem = "Olá, gostaria de fazer o seguinte pedido:%0A";
-  let total = 0;
+  function atualizarCarrinho(){
+    const lista = document.getElementById("listaCarrinho");
+    let total = 0;
+    lista.innerHTML = "";
 
-  carrinho.forEach(item=>{
-    mensagem += `- ${item.nome} - R$ ${item.preco.toFixed(2)}%0A`;
-    total += item.preco;
-  });
+    carrinho.forEach((item, idx) => {
+      total += item.preco;
+      const li = document.createElement("li");
+      li.textContent = `${item.nome} - R$ ${item.preco.toFixed(2)}`;
+      lista.appendChild(li);
+    });
 
-  mensagem += `%0ATotal: R$ ${total.toFixed(2)}`;
+    document.getElementById("total").textContent = total.toFixed(2);
+  }
 
-  window.open(`https://ig.me/m/barbaraemilybe);
-}
+  function gerarPedido(){
+    if(carrinho.length === 0){
+      alert("Carrinho vazio.");
+      return;
+    }
+
+    const agora = new Date();
+    const pedidoId = agora.getFullYear().toString().slice(-2) +
+      String(agora.getMonth()+1).padStart(2,'0') +
+      String(agora.getDate()).padStart(2,'0') + "-" +
+      String(agora.getHours()).padStart(2,'0') +
+      String(agora.getMinutes()).padStart(2,'0');
+
+    let total = 0;
+    let linhas = [];
+    linhas.push(`Pedido do catálogo (ID ${pedidoId}):`);
+    linhas.push("");
+
+    carrinho.forEach(item => {
+      total += item.preco;
+      linhas.push(`- ${item.nome} — R$ ${item.preco.toFixed(2)}`);
+    });
+
+    linhas.push("");
+    linhas.push(`Total: R$ ${total.toFixed(2)}`);
+    linhas.push("");
+    linhas.push("Oi 😊 fiz esse pedido pelo catálogo e gostaria de saber mais.");
+
+    document.getElementById("resumoPedido").value = linhas.join("\n");
+  }
+
+  async function copiarPedido(){
+    const campo = document.getElementById("resumoPedido");
+    const texto = campo.value.trim();
+
+    if(!texto){
+      alert("Clique primeiro em 'Gerar pedido (copiar)'.");
+      return;
+    }
+
+    // Tenta método moderno
+    try{
+      await navigator.clipboard.writeText(texto);
+      alert("Pedido copiado. Agora abra o Instagram e cole no Direct da loja.");
+      return;
+    } catch(e){}
+
+    // Fallback
+    campo.focus();
+    campo.select();
+    const ok = document.execCommand("copy");
+    if(ok){
+      alert("Pedido copiado. Agora abra o Instagram e cole no Direct da loja.");
+    } else {
+      alert("Não consegui copiar automaticamente. Selecione o texto e copie manualmente.");
+    }
+  }
+
+  function limparCarrinho(){
+    carrinho = [];
+    atualizarCarrinho();
+    document.getElementById("resumoPedido").value = "";
+  }
+
+  // Inicializa
+  atualizarCarrinho();
 </script>
 
-<div style="position:fixed; bottom:0; width:100%; background:#fff; padding:10px; box-shadow:0 -2px 5px rgba(0,0,0,.2);">
-  <strong>Carrinho:</strong>
-  <ul id="listaCarrinho" style="max-height:80px; overflow:auto; padding-left:15px;"></ul>
-  Total: R$ <span id="total">0.00</span><br>
-  <button onclick="finalizarPedido()" style="margin-top:5px; padding:8px; width:100%; background:#25D366; color:#fff; border:none; border-radius:5px;">
-    Finalizar pelo Instagram
-  </button>
-</div>
-  
 </body>
 </html>
-
-
-
-
-
-
-
