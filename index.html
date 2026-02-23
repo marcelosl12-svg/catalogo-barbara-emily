@@ -73,19 +73,9 @@ body{
 
 <!-- MODELO DE CARD (repete para todos os produtos) -->
 
-<div class="card">
-  <img src="imagens/1.jpg" alt="Hidratante Labial – Sarah’s Beauty">
-
-  <h2>Hidratante Labial – Sarah’s Beauty</h2>
-
-  <div class="price">R$ 6,50</div>
-
-  <a class="btn"
-     href="https://ig.me/m/barbaraemilybe"
-     target="_blank" rel="noopener">
-    💬 Falar com a loja
-  </a>
-</div>
+<button onclick="adicionar('Hidratante Labial – Sarah’s Beauty', 6.50)" class="btn">
+  Adicionar ao carrinho
+</button>
 
 <div class="card">
   <img src="imagens/2.jpg" alt="Candy Pop – Lua&Neve">
@@ -101,8 +91,58 @@ body{
 </div>
 
 <!-- Continue repetindo o mesmo padrão para os outros produtos -->
+<script>
+let carrinho = [];
 
+function adicionar(nome, preco){
+  carrinho.push({nome, preco});
+  atualizarCarrinho();
+}
+
+function atualizarCarrinho(){
+  let lista = document.getElementById("listaCarrinho");
+  let total = 0;
+  lista.innerHTML = "";
+
+  carrinho.forEach(item=>{
+    total += item.preco;
+    lista.innerHTML += `<li>${item.nome} - R$ ${item.preco.toFixed(2)}</li>`;
+  });
+
+  document.getElementById("total").innerText = total.toFixed(2);
+}
+
+function finalizarPedido(){
+  if(carrinho.length === 0){
+    alert("Carrinho vazio");
+    return;
+  }
+
+  let mensagem = "Olá, gostaria de fazer o seguinte pedido:%0A";
+  let total = 0;
+
+  carrinho.forEach(item=>{
+    mensagem += `- ${item.nome} - R$ ${item.preco.toFixed(2)}%0A`;
+    total += item.preco;
+  });
+
+  mensagem += `%0ATotal: R$ ${total.toFixed(2)}`;
+
+  window.open(`https://wa.me/5585989498950?text=${mensagem}`, "_blank");
+}
+</script>
+
+<div style="position:fixed; bottom:0; width:100%; background:#fff; padding:10px; box-shadow:0 -2px 5px rgba(0,0,0,.2);">
+  <strong>Carrinho:</strong>
+  <ul id="listaCarrinho" style="max-height:80px; overflow:auto; padding-left:15px;"></ul>
+  Total: R$ <span id="total">0.00</span><br>
+  <button onclick="finalizarPedido()" style="margin-top:5px; padding:8px; width:100%; background:#25D366; color:#fff; border:none; border-radius:5px;">
+    Finalizar pelo WhatsApp
+  </button>
+</div>
+  
 </body>
 </html>
+
 
 
