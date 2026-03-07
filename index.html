@@ -3,32 +3,78 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Catálogo Bárbara Emily</title>
+<title>Catálogo Sarah’s Beauty</title>
 
 <style>
   body{
     font-family: Arial, sans-serif;
     background:#fff0f5;
     margin:0;
-    padding-bottom: 20px; /* espaço pro carrinho fixo */
   }
   header{
-     background:#800000;
-  color:#fff;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  gap:10px;
-  padding:12px;
-  font-size:22px;
+    background:#e91e63;
+    color:#fff;
+    padding:10px 12px;
+    font-size:22px;
+    position:sticky;
+    top:0;
+    z-index:20;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
   }
-.topo img{
- width:40px;
-  height:40px;
-  border-radius:50%;
-  object-fit:cover;
-  background:#fff;
-}
+  .header-title{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    min-width:0;
+  }
+  .logo{
+    width:38px;
+    height:38px;
+    border-radius:50%;
+    object-fit:cover;
+    background:#fff;
+    flex-shrink:0;
+  }
+  .title-text{
+    font-size:22px;
+    font-weight:bold;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+
+  .cart-toggle{
+    position:relative;
+    background:#fff;
+    color:#e91e63;
+    border:none;
+    border-radius:50%;
+    width:42px;
+    height:42px;
+    font-size:20px;
+    cursor:pointer;
+    flex-shrink:0;
+  }
+  .cart-badge{
+    position:absolute;
+    top:-5px;
+    right:-5px;
+    background:#833ab4;
+    color:#fff;
+    border-radius:50%;
+    min-width:20px;
+    height:20px;
+    padding:0 5px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:11px;
+    font-weight:bold;
+    box-sizing:border-box;
+  }
 
   .card{
     background:#fff;
@@ -52,8 +98,6 @@
     font-size:18px;
     font-weight:bold;
   }
-
-  /* Botão padrão */
   .btn{
     display:block;
     margin-top:10px;
@@ -64,82 +108,185 @@
     border-radius:8px;
     text-decoration:none;
     font-weight:bold;
-    border: none;
-    width: 100%;
-    cursor: pointer;
+    border:none;
+    width:100%;
+    cursor:pointer;
   }
-  .btn:active{ transform: translateY(1px); }
-
-  /* Carrinho fixo */
-  .cart{
-    position:fixed;
-    bottom:0;
-    left:0;
-    right:0;
-    background:#fff;
-    border-top: 1px solid rgba(0,0,0,.12);
-    box-shadow:0 -2px 10px rgba(0,0,0,.12);
-    padding:10px 12px;
-    z-index: 10;
-  }
-  .cart-row{
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    gap:10px;
-    flex-wrap: wrap;
-  }
-  .cart-title{ font-weight: bold; }
-  .cart-total{
-    font-weight:bold;
-    color:#e91e63;
-  }
-  .cart-list{
-    margin:8px 0 10px;
-    padding-left:18px;
-    max-height:70px;
-    overflow:auto;
-  }
-  .cart-actions{
-    display:flex;
-    gap:8px;
-    flex-wrap: wrap;
-  }
+  .btn:active{ transform:translateY(1px); }
   .btn-secondary{
     background:#444;
   }
   .btn-light{
     background:#f2f2f2;
     color:#111;
-    border: 1px solid #ddd;
+    border:1px solid #ddd;
+  }
+
+  .cart-panel{
+    position:fixed;
+    top:60px;
+    right:10px;
+    left:10px;
+    max-height:80vh;
+    background:#fff;
+    border-radius:14px;
+    box-shadow:0 8px 25px rgba(0,0,0,.2);
+    padding:12px;
+    z-index:30;
+    display:none;
+    overflow:auto;
+  }
+  .cart-panel.open{
+    display:block;
+  }
+  .cart-header{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:10px;
+    margin-bottom:8px;
+  }
+  .cart-title{
+    font-weight:bold;
+    font-size:18px;
+  }
+  .close-cart{
+    border:none;
+    background:#eee;
+    border-radius:8px;
+    padding:6px 10px;
+    cursor:pointer;
+    font-weight:bold;
+  }
+  .cart-total{
+    font-weight:bold;
+    color:#e91e63;
+  }
+  .cart-list{
+    margin:8px 0 10px;
+    padding-left:0;
+    max-height:220px;
+    overflow:auto;
+    list-style:none;
+  }
+  .cart-item{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:8px;
+    padding:6px 0;
+    border-bottom:1px solid #f1f1f1;
+    font-size:14px;
+  }
+  .cart-item:last-child{
+    border-bottom:none;
+  }
+  .cart-item-info{
+    flex:1;
+  }
+  .qty-controls{
+    display:flex;
+    align-items:center;
+    gap:4px;
+  }
+  .qty-btn{
+    background:#833ab4;
+    color:#fff;
+    border:none;
+    border-radius:6px;
+    width:26px;
+    height:26px;
+    cursor:pointer;
+    font-weight:bold;
+    line-height:1;
+  }
+  .qty-number{
+    min-width:24px;
+    text-align:center;
+    font-weight:bold;
+  }
+  .remove-btn{
+    background:#e91e63;
+    color:#fff;
+    border:none;
+    border-radius:6px;
+    padding:4px 8px;
+    cursor:pointer;
+    font-weight:bold;
+    line-height:1;
+  }
+  .cart-actions{
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
   }
   textarea{
     width:100%;
     height:80px;
     border-radius:10px;
-    border:1px solid #c71212;
+    border:1px solid #ddd;
     padding:10px;
     resize:none;
     box-sizing:border-box;
     margin-top:8px;
-    font-family: Arial, sans-serif;
+    font-family:Arial, sans-serif;
   }
   .hint{
     font-size:12px;
     opacity:.8;
     margin-top:6px;
   }
+  .overlay{
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,.25);
+    z-index:25;
+    display:none;
+  }
+  .overlay.open{
+    display:block;
+  }
 </style>
 </head>
 
 <body>
 
-<header class="topo">
-  <img src="imagens/perfil.jpg" alt="Bárbara Emily">
-  <span>Catálogo Bárbara Emily</span>
+<header>
+  <div class="header-title">
+    <img src="imagens/perfil.jpg" alt="Bárbara Emily" class="logo">
+    <span class="title-text">Catálogo Bárbara Emily</span>
+  </div>
+
+  <button class="cart-toggle" onclick="toggleCarrinho()">
+    🛒
+    <span class="cart-badge" id="cartBadge">0</span>
+  </button>
 </header>
 
-<!-- PRODUTOS (ordem do PDF / imagens 1.jpg ... 30.jpg) -->
+<div class="overlay" id="overlay" onclick="fecharCarrinho()"></div>
+
+<div class="cart-panel" id="cartPanel">
+  <div class="cart-header">
+    <div class="cart-title">Carrinho</div>
+    <button class="close-cart" onclick="fecharCarrinho()">Fechar</button>
+  </div>
+
+  <div style="margin-bottom:8px;">
+    Total: R$ <span class="cart-total" id="total">0.00</span>
+  </div>
+
+  <ul class="cart-list" id="listaCarrinho"></ul>
+
+  <div class="cart-actions">
+    <button class="btn" onclick="gerarPedidoECopiar()">Gerar pedido (copiar)</button>
+    <button class="btn btn-secondary" onclick="limparCarrinho()">Limpar carrinho</button>
+    <a class="btn btn-light" href="https://www.instagram.com/barbaraemilybe/" target="_blank" rel="noopener">Abrir Instagram da loja</a>
+  </div>
+
+  <textarea id="resumoPedido" readonly placeholder="Clique em 'Gerar pedido (copiar)' para montar e copiar o texto do pedido..."></textarea>
+  <div class="hint">Depois de copiar, abra o Instagram e cole no Direct da loja.</div>
+</div>
+
 <div class="card"><img src="imagens/1.jpg"  alt="Hidratante Labial – Sarah’s Beauty"><h2>Hidratante Labial – Sarah’s Beauty</h2><div class="price">R$ 6,50</div><button class="btn" onclick="adicionar('Hidratante Labial – Sarah’s Beauty', 6.50)">Adicionar ao carrinho</button></div>
 <div class="card"><img src="imagens/2.jpg"  alt="Candy Pop – Lua&Neve"><h2>Candy Pop – Lua&Neve</h2><div class="price">R$ 8,00</div><button class="btn" onclick="adicionar('Candy Pop – Lua&Neve', 8.00)">Adicionar ao carrinho</button></div>
 <div class="card"><img src="imagens/3.jpg"  alt="Lip Balm Bastão – 4 Angel"><h2>Lip Balm Bastão – 4 Angel</h2><div class="price">R$ 18,90</div><button class="btn" onclick="adicionar('Lip Balm Bastão – 4 Angel', 18.90)">Adicionar ao carrinho</button></div>
@@ -171,33 +318,62 @@
 <div class="card"><img src="imagens/29.jpg" alt="Sabonete Primer Pré-Maquiagem – Derma Chem"><h2>Sabonete Primer Pré-Maquiagem – Derma Chem</h2><div class="price">R$ 15,95</div><button class="btn" onclick="adicionar('Sabonete Primer Pré-Maquiagem – Derma Chem', 15.95)">Adicionar ao carrinho</button></div>
 <div class="card"><img src="imagens/30.jpg" alt="Lenço Umedecido – Fenzza"><h2>Lenço Umedecido – Fenzza</h2><div class="price">R$ 12,00</div><button class="btn" onclick="adicionar('Lenço Umedecido – Fenzza', 12.00)">Adicionar ao carrinho</button></div>
 
-<!-- CARRINHO FIXO -->
-<div class="cart">
-  <div class="cart-row">
-    <div class="cart-title">Carrinho</div>
-    <div>Total: R$ <span class="cart-total" id="total">0.00</span></div>
-  </div>
-
-  <ul class="cart-list" id="listaCarrinho"></ul>
-
-  <div class="cart-actions">
-    <button class="btn" onclick="gerarPedido()">Gerar pedido (copiar)</button>
-    <button class="btn btn-light" onclick="copiarPedido()">Copiar pedido</button>
-    <button class="btn btn-secondary" onclick="limparCarrinho()">Limpar carrinho</button>
-    <a class="btn btn-light" href="https://ig.me/m/barbaraemilybe/" target="_blank" rel="noopener">Abrir Instagram da loja</a>
-  </div>
-
-  <textarea id="resumoPedido" readonly placeholder="Clique em 'Gerar pedido (copiar)' para montar o texto do pedido..."></textarea>
-  <div class="hint">Depois de copiar, abra o Instagram e cole no Direct da loja.</div>
-</div>
-
 <script>
-  // Carrinho simples (sem backend)
   let carrinho = [];
 
+  function toggleCarrinho(){
+    document.getElementById("cartPanel").classList.toggle("open");
+    document.getElementById("overlay").classList.toggle("open");
+  }
+
+  function fecharCarrinho(){
+    document.getElementById("cartPanel").classList.remove("open");
+    document.getElementById("overlay").classList.remove("open");
+  }
+
+  function atualizarContadorCarrinho(){
+    const totalItens = carrinho.reduce((acc, item) => acc + item.quantidade, 0);
+    document.getElementById("cartBadge").textContent = totalItens;
+  }
+
   function adicionar(nome, preco){
-    carrinho.push({nome, preco});
+    const itemExistente = carrinho.find(item => item.nome === nome);
+
+    if(itemExistente){
+      itemExistente.quantidade += 1;
+    } else {
+      carrinho.push({nome, preco, quantidade: 1});
+    }
+
     atualizarCarrinho();
+    atualizarContadorCarrinho();
+    document.getElementById("resumoPedido").value = "";
+  }
+
+  function aumentarQuantidade(index){
+    carrinho[index].quantidade += 1;
+    atualizarCarrinho();
+    atualizarContadorCarrinho();
+    document.getElementById("resumoPedido").value = "";
+  }
+
+  function diminuirQuantidade(index){
+    carrinho[index].quantidade -= 1;
+
+    if(carrinho[index].quantidade <= 0){
+      carrinho.splice(index, 1);
+    }
+
+    atualizarCarrinho();
+    atualizarContadorCarrinho();
+    document.getElementById("resumoPedido").value = "";
+  }
+
+  function removerItem(index){
+    carrinho.splice(index, 1);
+    atualizarCarrinho();
+    atualizarContadorCarrinho();
+    document.getElementById("resumoPedido").value = "";
   }
 
   function atualizarCarrinho(){
@@ -205,20 +381,32 @@
     let total = 0;
     lista.innerHTML = "";
 
-    carrinho.forEach((item, idx) => {
-      total += item.preco;
+    carrinho.forEach((item, index) => {
+      const subtotal = item.preco * item.quantidade;
+      total += subtotal;
+
       const li = document.createElement("li");
-      li.textContent = `${item.nome} - R$ ${item.preco.toFixed(2)}`;
+      li.className = "cart-item";
+
+      li.innerHTML = `
+        <span class="cart-item-info">${item.nome} - R$ ${subtotal.toFixed(2)}</span>
+        <div class="qty-controls">
+          <button class="qty-btn" onclick="diminuirQuantidade(${index})">-</button>
+          <span class="qty-number">${item.quantidade}</span>
+          <button class="qty-btn" onclick="aumentarQuantidade(${index})">+</button>
+          <button class="remove-btn" onclick="removerItem(${index})">❌</button>
+        </div>
+      `;
+
       lista.appendChild(li);
     });
 
     document.getElementById("total").textContent = total.toFixed(2);
   }
 
-  function gerarPedido(){
+  function gerarPedidoTexto(){
     if(carrinho.length === 0){
-      alert("Carrinho vazio.");
-      return;
+      return null;
     }
 
     const agora = new Date();
@@ -234,8 +422,9 @@
     linhas.push("");
 
     carrinho.forEach(item => {
-      total += item.preco;
-      linhas.push(`- ${item.nome} — R$ ${item.preco.toFixed(2)}`);
+      const subtotal = item.preco * item.quantidade;
+      total += subtotal;
+      linhas.push(`- ${item.nome} x${item.quantidade} — R$ ${subtotal.toFixed(2)}`);
     });
 
     linhas.push("");
@@ -243,44 +432,45 @@
     linhas.push("");
     linhas.push("Oi 😊 fiz esse pedido pelo catálogo e gostaria de saber mais.");
 
-    document.getElementById("resumoPedido").value = linhas.join("\n");
+    return linhas.join("\n");
   }
 
-  async function copiarPedido(){
-    const campo = document.getElementById("resumoPedido");
-    const texto = campo.value.trim();
-
-    if(!texto){
-      alert("Clique primeiro em 'Gerar pedido (copiar)'.");
+  async function gerarPedidoECopiar(){
+    if(carrinho.length === 0){
+      alert("Carrinho vazio.");
       return;
     }
 
-    // Tenta método moderno
+    const texto = gerarPedidoTexto();
+    const campo = document.getElementById("resumoPedido");
+    campo.value = texto;
+
     try{
       await navigator.clipboard.writeText(texto);
-      alert("Pedido copiado. Agora abra o Instagram e cole no Direct da loja.");
+      alert("Pedido gerado e copiado. Agora abra o Instagram e cole no Direct da loja.");
       return;
     } catch(e){}
 
-    // Fallback
     campo.focus();
     campo.select();
     const ok = document.execCommand("copy");
+
     if(ok){
-      alert("Pedido copiado. Agora abra o Instagram e cole no Direct da loja.");
+      alert("Pedido gerado e copiado. Agora abra o Instagram e cole no Direct da loja.");
     } else {
-      alert("Não consegui copiar automaticamente. Selecione o texto e copie manualmente.");
+      alert("Pedido gerado, mas não consegui copiar automaticamente. Copie o texto manualmente.");
     }
   }
 
   function limparCarrinho(){
     carrinho = [];
     atualizarCarrinho();
+    atualizarContadorCarrinho();
     document.getElementById("resumoPedido").value = "";
   }
 
-  // Inicializa
   atualizarCarrinho();
+  atualizarContadorCarrinho();
 </script>
 
 </body>
