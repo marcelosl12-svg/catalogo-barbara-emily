@@ -3,754 +3,1040 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <title>Catálogo Bárbara Emily</title>
 
 <style>
-  body{
-    font-family: Arial, sans-serif;
-    background:#fff0f5;
-    margin:0;
-  }
-  header{
-    background:#800000;
-    color:#fff;
-    padding:10px 12px;
-    font-size:22px;
-    position:sticky;
-    top:0;
-    z-index:20;
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    gap:10px;
-  }
-  .header-title{
-    display:flex;
-    align-items:center;
-    gap:10px;
-    min-width:0;
-  }
-  .logo{
-    width:38px;
-    height:38px;
-    border-radius:50%;
-    object-fit:cover;
-    background:#fff;
-    flex-shrink:0;
-  }
-  .title-text{
-    font-size:22px;
-    font-weight:bold;
-    white-space:nowrap;
-    overflow:hidden;
-    text-overflow:ellipsis;
-  }
 
-  .cart-toggle{
-    position:relative;
-    background:#fff;
-    color:#e91e63;
-    border:none;
-    border-radius:50%;
-    width:42px;
-    height:42px;
-    font-size:20px;
-    cursor:pointer;
-    flex-shrink:0;
-  }
-  .cart-badge{
-    position:absolute;
-    top:-5px;
-    right:-5px;
-    background:#000000;
-    color:#fff;
-    border-radius:50%;
-    min-width:20px;
-    height:20px;
-    padding:0 5px;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    font-size:11px;
-    font-weight:bold;
-    box-sizing:border-box;
-  }
+body{
+font-family:Arial;
+margin:0;
+background:#f3f3f3;
+}
 
-  .card{
-    background:#fff;
-    margin:12px;
-    padding:12px;
-    border-radius:14px;
-    box-shadow:0 2px 6px rgba(0,0,0,.15);
-  }
-  .card img{
-    width:100%;
-    max-height:280px;
-    object-fit:contain;
-    border-radius:10px;
-  }
-  .card h2{
-    font-size:17px;
-    margin:8px 0 4px;
-  }
-  .price{
-    color:#800000;
-    font-size:18px;
-    font-weight:bold;
-  }
-  .btn{
-    display:block;
-    margin-top:10px;
-    padding:10px;
-    text-align:center;
-    background:#000000;
-    color:#fff;
-    border-radius:8px;
-    text-decoration:none;
-    font-weight:bold;
-    border:none;
-    width:100%;
-    cursor:pointer;
-  }
-  .btn:active{ transform:translateY(1px); }
-  .btn-secondary{
-    background:#444;
-  }
-  .btn-light{
-    background:#f2f2f2;
-    color:#111;
-    border:1px solid #ddd;
-  }
-  .option-select{
-    width:100%;
-    margin-top:10px;
-    padding:10px;
-    border:1px solid #ddd;
-    border-radius:8px;
-    font-size:15px;
-    background:#fff;
-    box-sizing:border-box;
-  }
 
-  .cart-panel{
-    position:fixed;
-    top:60px;
-    right:10px;
-    left:10px;
-    max-height:80vh;
-    background:#fff;
-    border-radius:14px;
-    box-shadow:0 8px 25px rgba(0,0,0,.2);
-    padding:12px;
-    z-index:30;
-    display:none;
-    overflow:auto;
-  }
-  .cart-panel.open{
-    display:block;
-  }
-  .cart-header{
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    gap:10px;
-    margin-bottom:8px;
-  }
-  .cart-title{
-    font-weight:bold;
-    font-size:18px;
-  }
-  .close-cart{
-    border:none;
-    background:#eee;
-    border-radius:8px;
-    padding:6px 10px;
-    cursor:pointer;
-    font-weight:bold;
-  }
-  .cart-total{
-    font-weight:bold;
-    color:#800000;
-  }
-  .cart-list{
-    margin:8px 0 10px;
-    padding-left:0;
-    max-height:220px;
-    overflow:auto;
-    list-style:none;
-  }
-  .cart-item{
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    gap:8px;
-    padding:6px 0;
-    border-bottom:1px solid #f1f1f1;
-    font-size:14px;
-  }
-  .cart-item:last-child{
-    border-bottom:none;
-  }
-  .cart-item-info{
-    flex:1;
-  }
-  .qty-controls{
-    display:flex;
-    align-items:center;
-    gap:4px;
-  }
-  .qty-btn{
-    background:#833ab4;
-    color:#fff;
-    border:none;
-    border-radius:6px;
-    width:26px;
-    height:26px;
-    cursor:pointer;
-    font-weight:bold;
-    line-height:1;
-  }
-  .qty-number{
-    min-width:24px;
-    text-align:center;
-    font-weight:bold;
-  }
-  .remove-btn{
-    background:#e91e63;
-    color:#fff;
-    border:none;
-    border-radius:6px;
-    padding:4px 8px;
-    cursor:pointer;
-    font-weight:bold;
-    line-height:1;
-  }
-  .cart-actions{
-    display:flex;
-    gap:8px;
-    flex-wrap:wrap;
-  }
-  textarea{
-    width:100%;
-    height:80px;
-    border-radius:10px;
-    border:1px solid #ddd;
-    padding:10px;
-    resize:none;
-    box-sizing:border-box;
-    margin-top:8px;
-    font-family:Arial, sans-serif;
-  }
-  .hint{
-    font-size:12px;
-    opacity:.8;
-    margin-top:6px;
-  }
-  .overlay{
-    position:fixed;
-    inset:0;
-    background:rgba(0,0,0,.25);
-    z-index:25;
-    display:none;
-  }
-  .overlay.open{
-    display:block;
-  }
+
+/* HEADER */
+
+header{
+background:linear-gradient(45deg,#8b0000);
+color:white;
+display:flex;
+align-items:center;
+justify-content:space-between;
+padding:12px 15px;
+box-shadow:0 3px 10px rgba(0,0,0,0.2);
+}
+
+.logoArea{
+display:flex;
+align-items:center;
+gap:10px;
+}
+
+.logo{
+width:40px;
+height:40px;
+border-radius:50%;
+}
+
+.stock{
+font-size:14px;
+line-height:1.5;
+margin-top:5px;
+}
+
+.cartIcon{
+background:white;
+width:42px;
+height:42px;
+border-radius:50%;
+display:flex;
+align-items:center;
+justify-content:center;
+cursor:pointer;
+position:relative;
+font-size:20px;
+}
+
+.cartBadge{
+position:absolute;
+top:-5px;
+right:-5px;
+background:black;
+color:white;
+font-size:12px;
+border-radius:50%;
+width:18px;
+height:18px;
+display:flex;
+align-items:center;
+justify-content:center;
+}
+
+
+
+/* PRODUTOS */
+
+.grid{
+display:grid;
+grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+gap:15px;
+padding:15px;
+}
+
+.card{
+background:white;
+border-radius:12px;
+padding:10px;
+box-shadow:0 4px 10px rgba(0,0,0,0.15);
+transition:0.2s;
+}
+
+.card:hover{
+transform:scale(1.02);
+}
+
+.card img{
+width:100%;
+height:150px;
+object-fit:contain;
+background:#fff;
+}
+
+.price{
+font-weight:bold;
+color:#8b0000;
+font-size:18px;
+margin-top:5px;
+}
+
+.stock{
+font-size:13px;
+margin-top:3px;
+}
+
+.btn{
+margin-top:8px;
+width:100%;
+padding:10px;
+background:black;
+color:white;
+border:none;
+border-radius:8px;
+cursor:pointer;
+transition:0.2s;
+}
+
+.btn:hover{
+background:#333;
+}
+
+
+
+/* CARRINHO */
+
+.cartPanel{
+position:fixed;
+top:0;
+right:0;
+width:320px;
+height:100%;
+background:#faf8f8;
+padding:15px;
+box-shadow:-5px 0 15px rgba(0,0,0,0.4);
+display:none;
+z-index:100;
+overflow-y:auto;
+}
+
+.cartHeader{
+display:flex;
+justify-content:space-between;
+align-items:center;
+}
+
+.closeBtn{
+background:#eee;
+border:none;
+padding:6px 10px;
+border-radius:5px;
+cursor:pointer;
+}
+
+.cartItem{
+display:flex;
+justify-content:space-between;
+align-items:center;
+margin:10px 0;
+}
+
+.qtyControls{
+display:flex;
+align-items:center;
+gap:5px;
+}
+
+.qtyBtn{
+background:#7b3fa0;
+color:white;
+border:none;
+width:28px;
+height:28px;
+border-radius:6px;
+cursor:pointer;
+}
+
+.removeBtn{
+background:#f70707;
+border:none;
+color:white;
+width:28px;
+height:28px;
+border-radius:6px;
+cursor:pointer;
+}
+
+select, textarea{
+width:100%;
+margin-top:8px;
+padding:8px;
+border-radius:6px;
+border:1px solid #ccc;
+}
+
+.instagramBtn{
+width:100%;
+padding:10px;
+background:#800000;
+color:white;
+border:none;
+border-radius:6px;
+margin-top:8px;
+cursor:pointer;
+}
+
+.totalBox{
+color:#800000;
+font-weight:bold;
+font-size:20px;
+padding:6px 10px;
+border-radius:8px;
+display:inline-block;
+}
+
+
+
+/* Titulo */
+
+.titulo{
+font-size:clamp(15px, 4vw, 24px);
+font-weight:bold;
+}
+
 </style>
 </head>
 
 <body>
 
 <header>
-  <div class="header-title">
-    <img src="imagens/perfil.jpg" alt="Bárbara Emily" class="logo">
-    <span class="title-text">Catálogo Bárbara Emily</span>
-  </div>
+ <div class="logoArea">
+<img src="imagens/00/perfil.jpg" class="logo">
+<b class="titulo">Catálogo Bárbara Emily</b>
+</div>
 
-  <button class="cart-toggle" onclick="toggleCarrinho()">
-    🛒
-    <span class="cart-badge" id="cartBadge">0</span>
-  </button>
+
+  <div class="cartIcon" onclick="toggleCarrinho()">
+🛒
+<span id="cartBadge" class="cartBadge">0</span>
+</div>
+
+
 </header>
 
-<div class="overlay" id="overlay" onclick="fecharCarrinho()"></div>
 
-<div class="cart-panel" id="cartPanel">
-  <div class="cart-header">
-    <div class="cart-title">Carrinho</div>
-    <button class="close-cart" onclick="fecharCarrinho()">Fechar</button>
-  </div>
 
-  <div style="margin-bottom:8px;">
-    Total: R$ <span class="cart-total" id="total">0.00</span>
-  </div>
 
-  <ul class="cart-list" id="listaCarrinho"></ul>
+<!-- PRODUTOS -->
 
-  <div class="cart-actions">
-    <button class="btn" onclick="gerarPedidoECopiar()">Gerar pedido (copiar)</button>
-    <button class="btn btn-secondary" onclick="limparCarrinho()">Limpar carrinho</button>
-    <a class="btn btn-light" href="https://www.instagram.com/barbaraemilybe/" target="_blank" rel="noopener">Abrir Instagram da loja</a>
-  </div>
 
-  <textarea id="resumoPedido" readonly placeholder="Clique em 'Gerar pedido (copiar)' para montar e copiar o texto do pedido..."></textarea>
-  <div class="hint">Depois de copiar, abra o Instagram e cole no Direct da loja.</div>
+<!-- PRODUTOS AUTOMÁTICOS -->
+
+<div class="grid" id="produtosContainer"></div>
+
+
+
+
+<!-- CARRINHO -->
+
+<div id="cartPanel" class="cartPanel">
+
+<div class="cartHeader">
+<b>Carrinho</b>
+<button class="closeBtn" onclick="toggleCarrinho()">Fechar</button>
 </div>
 
-<!-- 1 -->
-<div class="card">
-  <img src="imagens/1.jpg" alt="Hidratante Labial – Sarah’s Beauty">
-  <h2>Hidratante Labial – Sarah’s Beauty</h2>
-  <div class="price">R$ 6,50</div>
-  <select id="opcao-hidratante" class="option-select">
-    <option value="03">Vermelho</option>
-    <option value="04">Rosa</option>
-    <option value="04">Não faço ideia de que cor seja</option>
-  </select>
-  <button class="btn" onclick="adicionarComOpcao('Hidratante Labial – Sarah’s Beauty', 6.50, 'opcao-hidratante')">Adicionar ao carrinho</button>
+<p class="totalBox">Total: R$ <span id="total">0.00</span></p>
+
+<select id="pagamento">
+<option value="">Forma de pagamento</option>
+<option>Dinheiro</option>
+<option>PIX</option>
+<option>Cartão</option>
+</select>
+
+<select id="entrega">
+<option value="0">Opções de entrega</option>
+<option value="0">Retirar na loja</option>
+<option value="0">Via Uber flash (por conta do cliente)</option>
+</select>
+
+<div id="lista"></div>
+
+<button class="btn" onclick="gerarPedido()">Gerar pedido</button>
+<button class="btn" onclick="limparCarrinho()">Limpar</button>
+
+<button class="instagramBtn"
+onclick="window.open('https://ig.me/m/barbaraemilybe','_blank')">
+Abrir Instagram
+</button>
+
+<textarea id="pedido"></textarea>
+
 </div>
 
-<!-- 2 -->
-<div class="card">
-  <img src="imagens/2.jpg" alt="Candy Pop – Lua&Neve">
-  <h2>Candy Pop – Lua&Neve</h2>
-  <div class="price">R$ 8,00</div>
-  <select id="opcao-candypop" class="option-select">
-    <option value="01">Opção 01</option>
-    <option value="02">Opção 02</option>
-  </select>
-  <button class="btn" onclick="adicionarComOpcao('Candy Pop – Lua&Neve', 8.00, 'opcao-candypop')">Adicionar ao carrinho</button>
-</div>
 
-<!-- 3 -->
-<div class="card">
-  <img src="imagens/3.jpg" alt="Lip Balm Glow Love – Max Love">
-  <h2>Lip Balm Glow Love – Max Love</h2>
-  <div class="price">R$ 18,90</div>
-  <select id="opcao-glowlove" class="option-select">
-    <option value="415">Opção 415</option>
-    <option value="416">Opção 416</option>
-    <option value="421">Opção 421</option>
-    <option value="422">Opção 422</option>
-  </select>
-  <button class="btn" onclick="adicionarComOpcao('Lip Balm Glow Love – Max Love', 18.90, 'opcao-glowlove')">Adicionar ao carrinho</button>
-</div>
 
-<!-- 4 -->
-<div class="card">
-  <img src="imagens/4.jpg" alt="Lip Gloss – Belle Angel">
-  <h2>Lip Gloss – Belle Angel</h2>
-  <div class="price">R$ 10,00</div>
-  <button class="btn" onclick="adicionar('Lip Gloss – Belle Angel', 10.00)">Adicionar ao carrinho</button>
-</div>
+<!-- MODAL -->
 
-<!-- 5 -->
-<div class="card">
-  <img src="imagens/5.jpg" alt="Choco Fun Lip Gloss – Fenzza">
-  <h2>Choco Fun Lip Gloss – Fenzza</h2>
-  <div class="price">R$ 16,80</div>
-  <select id="opcao-chocofun" class="option-select">
-    <option value="Flan">Flan</option>
-    <option value="Sensação">Sensação</option>
-    <option value="Ganache">Ganache</option>
-  </select>
-  <button class="btn" onclick="adicionarComOpcao('Choco Fun Lip Gloss – Fenzza', 16.80, 'opcao-chocofun')">Adicionar ao carrinho</button>
-</div>
-
-<!-- 6 -->
-<div class="card">
-  <img src="imagens/6.jpg" alt="Batom Líquido Matte – Lua&Neve">
-  <h2>Batom Líquido Matte – Lua&Neve</h2>
-  <div class="price">R$ 14,00</div>
-  <select id="opcao-batom-liquido" class="option-select">
-    <option value="02">Opção 02</option>
-    <option value="03">Opção 03</option>
-  </select>
-  <button class="btn" onclick="adicionarComOpcao('Batom Líquido Matte – Lua&Neve', 14.00, 'opcao-batom-liquido')">Adicionar ao carrinho</button>
-</div>
-
-<!-- 7 -->
-<div class="card">
-  <img src="imagens/7.jpg" alt="Lápis Labial – Labranche">
-  <h2>Lápis Labial – Labranche</h2>
-  <div class="price">R$ 5,60</div>
-  <select id="opcao-lapis-labranche" class="option-select">
-    <option value="05">Opção 05</option>
-    <option value="06">Opção 06</option>
-  </select>
-  <button class="btn" onclick="adicionarComOpcao('Lápis Labial – Labranche', 5.60, 'opcao-lapis-labranche')">Adicionar ao carrinho</button>
-</div>
-
-<!-- 8 -->
-<div class="card">
-  <img src="imagens/8.jpg" alt="Blush – Belle Angel">
-  <h2>Blush – Belle Angel</h2>
-  <div class="price">R$ 15,80</div>
-  <button class="btn" onclick="adicionar('Blush – Belle Angel', 15.80)">Adicionar ao carrinho</button>
-</div>
-
-<!-- 9 -->
-<div class="card">
-  <img src="imagens/9.jpg" alt="Blush Glossy – SP Colors">
-  <h2>Blush Glossy – SP Colors</h2>
-  <div class="price">R$ 10,00</div>
-  <select id="opcao-blush-glossy" class="option-select">
-    <option value="02">Opção 02</option>
-    <option value="03">Opção 03</option>
-    <option value="04">Opção 04</option>
-  </select>
-  <button class="btn" onclick="adicionarComOpcao('Blush Glossy – SP Colors', 10.00, 'opcao-blush-glossy')">Adicionar ao carrinho</button>
-</div>
-
-<!-- 10 -->
-<div class="card">
-  <img src="imagens/10.jpg" alt="Blush Jelly – 4 Angel">
-  <h2>Blush Jelly – 4 Angel</h2>
-  <div class="price">R$ 16,90</div>
-  <select id="opcao-blush-jelly" class="option-select">
-    <option value="03">Opção 03</option>
-    <option value="04">Opção 04</option>
-  </select>
-  <button class="btn" onclick="adicionarComOpcao('Blush Jelly – 4 Angel', 16.90, 'opcao-blush-jelly')">Adicionar ao carrinho</button>
-</div>
-
-<!-- 11 -->
-<div class="card">
-  <img src="imagens/11.jpg" alt="Paleta de Blush – Hello Mini">
-  <h2>Paleta de Blush – Hello Mini</h2>
-  <div class="price">R$ 20,00</div>
-  <button class="btn" onclick="adicionar('Paleta de Blush – Hello Mini', 20.00)">Adicionar ao carrinho</button>
-</div>
-
-<!-- 12 -->
-<div class="card">
-  <img src="imagens/12.jpg" alt="Iluminador – Pink21">
-  <h2>Iluminador – Pink21</h2>
-  <div class="price">R$ 14,00</div>
-  <button class="btn" onclick="adicionar('Iluminador – Pink21', 14.00)">Adicionar ao carrinho</button>
-</div>
-
-<!-- 13 -->
-<div class="card">
-  <img src="imagens/13.jpg" alt="Iluminador – Hudamoji">
-  <h2>Iluminador – Hudamoji</h2>
-  <div class="price">R$ 12,00</div>
-  <button class="btn" onclick="adicionar('Iluminador – Hudamoji', 12.00)">Adicionar ao carrinho</button>
-</div>
-
-<!-- 14 -->
-<div class="card">
-  <img src="imagens/14.jpg" alt="Rímel – Maishaini">
-  <h2>Rímel – Maishaini</h2>
-  <div class="price">R$ 12,95</div>
-  <button class="btn" onclick="adicionar('Rímel – Maishaini', 12.95)">Adicionar ao carrinho</button>
-</div>
-
-<!-- 15 -->
-<div class="card">
-  <img src="imagens/15.jpg" alt="Rímel – Hello Mini">
-  <h2>Rímel – Hello Mini</h2>
-  <div class="price">R$ 20,00</div>
-  <button class="btn" onclick="adicionar('Rímel – Hello Mini', 20.00)">Adicionar ao carrinho</button>
-</div>
-
-<!-- 16 -->
-<div class="card">
-  <img src="imagens/16.jpg" alt="Lápis Preto – Max Love">
-  <h2>Lápis Preto – Max Love</h2>
-  <div class="price">R$ 3,50</div>
-  <button class="btn" onclick="adicionar('Lápis Preto – Max Love', 3.50)">Adicionar ao carrinho</button>
-</div>
-
-<!-- 17 -->
-<div class="card">
-  <img src="imagens/17.jpg" alt="Lápis Marrom – Hudamoji">
-  <h2>Lápis Marrom – Hudamoji</h2>
-  <div class="price">R$ 3,75</div>
-  <button class="btn" onclick="adicionar('Lápis Marrom – Hudamoji', 3.75)">Adicionar ao carrinho</button>
-</div>
-
-<!-- 18 -->
-<div class="card">
-  <img src="imagens/18.jpg" alt="Caneta Delineadora – Lua&Neve">
-  <h2>Caneta Delineadora – Lua&Neve</h2>
-  <div class="price">R$ 7,00</div>
-  <button class="btn" onclick="adicionar('Caneta Delineadora – Lua&Neve', 7.00)">Adicionar ao carrinho</button>
-</div>
-
-<!-- 19 -->
-<div class="card">
-  <img src="imagens/19.jpg" alt="Delineador Ultra Black – Vivai">
-  <h2>Delineador Ultra Black – Vivai</h2>
-  <div class="price">R$ 6,50</div>
-  <button class="btn" onclick="adicionar('Delineador Ultra Black – Vivai', 6.50)">Adicionar ao carrinho</button>
-</div>
-
-<!-- 20 -->
-<div class="card">
-  <img src="imagens/20.jpg" alt="Pó Compacto – Swiss Beauty">
-  <h2>Pó Compacto – Swiss Beauty</h2>
-  <div class="price">R$ 8,00</div>
-  <button class="btn" onclick="adicionar('Pó Compacto – Swiss Beauty', 8.00)">Adicionar ao carrinho</button>
-</div>
-
-<!-- 21 -->
-<div class="card">
-  <img src="imagens/21.jpg" alt="Pó Banana – Pop">
-  <h2>Pó Banana – Pop</h2>
-  <div class="price">R$ 11,00</div>
-  <button class="btn" onclick="adicionar('Pó Banana – Pop', 11.00)">Adicionar ao carrinho</button>
-</div>
-
-<!-- 22 -->
-<div class="card">
-  <img src="imagens/22.jpg" alt="Pó Solto – Lady Beauty">
-  <h2>Pó Solto – Lady Beauty</h2>
-  <div class="price">R$ 11,00</div>
-  <button class="btn" onclick="adicionar('Pó Solto – Lady Beauty', 11.00)">Adicionar ao carrinho</button>
-</div>
-
-<!-- 23 -->
-<div class="card">
-  <img src="imagens/23.jpg" alt="Esponja de Maquiagem – Lua&Neve">
-  <h2>Esponja de Maquiagem – Lua&Neve</h2>
-  <div class="price">R$ 8,00</div>
-  <button class="btn" onclick="adicionar('Esponja de Maquiagem – Lua&Neve', 8.00)">Adicionar ao carrinho</button>
-</div>
-
-<!-- 24 -->
-<div class="card">
-  <img src="imagens/24.jpg" alt="Pincel para Sobrancelha – Maishaini">
-  <h2>Pincel para Sobrancelha – Maishaini</h2>
-  <div class="price">R$ 7,00</div>
-  <button class="btn" onclick="adicionar('Pincel para Sobrancelha – Maishaini', 7.00)">Adicionar ao carrinho</button>
-</div>
-
-<!-- 25 -->
-<div class="card">
-  <img src="imagens/25.jpg" alt="Iluminador – Sarah’s Beauty">
-  <h2>Iluminador – Sarah’s Beauty</h2>
-  <div class="price">R$ 14,00</div>
-  <button class="btn" onclick="adicionar('Iluminador – Sarah’s Beauty', 14.00)">Adicionar ao carrinho</button>
-</div>
-
-<!-- 26 -->
-<div class="card">
-  <img src="imagens/26.jpg" alt="Iluminador Coração – Hudamoji">
-  <h2>Iluminador Coração – Hudamoji</h2>
-  <div class="price">R$ 14,00</div>
-  <button class="btn" onclick="adicionar('Iluminador Coração – Hudamoji', 14.00)">Adicionar ao carrinho</button>
-</div>
-
-<!-- 27 -->
-<div class="card">
-  <img src="imagens/27.jpg" alt="Sombra Líquida – Magic Look">
-  <h2>Sombra Líquida – Magic Look</h2>
-  <div class="price">R$ 8,00</div>
-  <select id="opcao-sombra-liquida" class="option-select">
-    <option value="07">Opção 07</option>
-    <option value="08">Opção 08</option>
-    <option value="09">Opção 09</option>
-    <option value="11">Opção 11</option>
-  </select>
-  <button class="btn" onclick="adicionarComOpcao('Sombra Líquida – Magic Look', 8.00, 'opcao-sombra-liquida')">Adicionar ao carrinho</button>
-</div>
-
-<!-- 28 -->
-<div class="card">
-  <img src="imagens/28.jpg" alt="Rímel – Miss Rôse">
-  <h2>Rímel – Miss Rôse</h2>
-  <div class="price">R$ 17,80</div>
-  <button class="btn" onclick="adicionar('Rímel – Miss Rôse', 17.80)">Adicionar ao carrinho</button>
-</div>
-
-<!-- 29 -->
-<div class="card">
-  <img src="imagens/29.jpg" alt="Sabonete Primer Pré-Maquiagem – Derma Chem">
-  <h2>Sabonete Primer Pré-Maquiagem – Derma Chem</h2>
-  <div class="price">R$ 15,95</div>
-  <button class="btn" onclick="adicionar('Sabonete Primer Pré-Maquiagem – Derma Chem', 15.95)">Adicionar ao carrinho</button>
-</div>
-
-<!-- 30 -->
-<div class="card">
-  <img src="imagens/30.jpg" alt="Lenço Umedecido – Fenzza">
-  <h2>Lenço Umedecido – Fenzza</h2>
-  <div class="price">R$ 12,00</div>
-  <button class="btn" onclick="adicionar('Lenço Umedecido – Fenzza', 12.00)">Adicionar ao carrinho</button>
-</div>
 
 <script>
-  let carrinho = [];
 
-  function toggleCarrinho(){
-    document.getElementById("cartPanel").classList.toggle("open");
-    document.getElementById("overlay").classList.toggle("open");
-  }
+let carrinho=[]
 
-  function fecharCarrinho(){
-    document.getElementById("cartPanel").classList.remove("open");
-    document.getElementById("overlay").classList.remove("open");
-  }
+let produtos = [
+{
+nome: "Hidratante Labial",
+marca: "Sarah’s Beauty",
+preco: 6.5,
+pasta: "Hidratante-Labial",
+imagem: "1.jpg",
+id: "1",
+opcoes: ["Morango","Melancia"]
+},
+{
+nome: "Candy pop lip gloss",
+marca: "Lua&Neve",
+preco: 8.0,
+pasta: "Candy-pop-lip-gloss",
+imagem: "2.jpg",
+id: "2",
+opcoes: ["Roxo","Rosa"]
+}
+]
 
-  function atualizarContadorCarrinho(){
-    const totalItens = carrinho.reduce((acc, item) => acc + item.quantidade, 0);
-    document.getElementById("cartBadge").textContent = totalItens;
-  }
+// salvar produtos
+function salvarProdutos(){
+localStorage.setItem("produtos", JSON.stringify(produtos))
+}
 
-  function adicionar(nome, preco){
-    const itemExistente = carrinho.find(item => item.nome === nome);
+// carregar produtos
+function carregarProdutos(){
+let dados = localStorage.getItem("produtos")
+if(dados){
+produtos = JSON.parse(dados)
+}
+}
 
-    if(itemExistente){
-      itemExistente.quantidade += 1;
-    } else {
-      carrinho.push({nome, preco, quantidade: 1});
-    }
+let estoques = {
+stock1: { Morango: 2, Melancia: 1 },
+stock2: { Roxo: 4, Rosa: 3 }
+}
 
-    atualizarCarrinho();
-    atualizarContadorCarrinho();
-    document.getElementById("resumoPedido").value = "";
-  }
+function gerarProdutos(){
 
-  function adicionarComOpcao(nome, preco, selectId){
-    const select = document.getElementById(selectId);
-    const opcao = select.value;
-    const nomeCompleto = `${nome} - ${opcao}`;
+let container = document.getElementById("produtosContainer")
+container.innerHTML = ""
 
-    const itemExistente = carrinho.find(item => item.nome === nomeCompleto);
+produtos.forEach((p, index)=>{
 
-    if(itemExistente){
-      itemExistente.quantidade += 1;
-    } else {
-      carrinho.push({nome: nomeCompleto, preco, quantidade: 1});
-    }
+let id = index + 1
 
-    atualizarCarrinho();
-    atualizarContadorCarrinho();
-    document.getElementById("resumoPedido").value = "";
-  }
+let opcoesHTML = `<option value="">Opções</option>`
 
-  function aumentarQuantidade(index){
-    carrinho[index].quantidade += 1;
-    atualizarCarrinho();
-    atualizarContadorCarrinho();
-    document.getElementById("resumoPedido").value = "";
-  }
+p.opcoes.forEach(op=>{
+opcoesHTML += `<option value="${op}.jpg">${op}</option>`
+})
 
-  function diminuirQuantidade(index){
-    carrinho[index].quantidade -= 1;
+container.innerHTML += `
+<div class="card">
 
-    if(carrinho[index].quantidade <= 0){
-      carrinho.splice(index, 1);
-    }
+<img id="img${id}" 
+src="imagens/${p.pasta}/${p.imagem}"
+onerror="this.onerror=null; this.src='imagens/sem-imagem.jpg'">
 
-    atualizarCarrinho();
-    atualizarContadorCarrinho();
-    document.getElementById("resumoPedido").value = "";
-  }
+<h3>${p.nome} - ${p.marca}</h3>
 
-  function removerItem(index){
-    carrinho.splice(index, 1);
-    atualizarCarrinho();
-    atualizarContadorCarrinho();
-    document.getElementById("resumoPedido").value = "";
-  }
+<div class="price">R$ ${p.preco.toFixed(2)}</div>
 
-  function atualizarCarrinho(){
-    const lista = document.getElementById("listaCarrinho");
-    let total = 0;
-    lista.innerHTML = "";
+<div class="stock" id="stock${id}"></div>
 
-    carrinho.forEach((item, index) => {
-      const subtotal = item.preco * item.quantidade;
-      total += subtotal;
+<select id="op${id}" onchange="trocarImagem('op${id}','img${id}','${p.pasta}')">
+${opcoesHTML}
+</select>
 
-      const li = document.createElement("li");
-      li.className = "cart-item";
+<button class="btn"
+onclick="addProduto('${p.nome}',${p.preco},'op${id}','stock${id}')">
+Adicionar
+</button>
 
-      li.innerHTML = `
-        <span class="cart-item-info">${item.nome} - R$ ${subtotal.toFixed(2)}</span>
-        <div class="qty-controls">
-          <button class="qty-btn" onclick="diminuirQuantidade(${index})">-</button>
-          <span class="qty-number">${item.quantidade}</span>
-          <button class="qty-btn" onclick="aumentarQuantidade(${index})">+</button>
-          <button class="remove-btn" onclick="removerItem(${index})">❌</button>
-        </div>
-      `;
+</div>
+`
 
-      lista.appendChild(li);
-    });
+})
 
-    document.getElementById("total").textContent = total.toFixed(2);
-  }
+}
 
-  function gerarPedidoTexto(){
-    if(carrinho.length === 0){
-      return null;
-    }
+function trocarImagem(selectId, imgId, pasta){
 
-    const agora = new Date();
-    const pedidoId = agora.getFullYear().toString().slice(-2) +
-      String(agora.getMonth()+1).padStart(2,'0') +
-      String(agora.getDate()).padStart(2,'0') + "-" +
-      String(agora.getHours()).padStart(2,'0') +
-      String(agora.getMinutes()).padStart(2,'0');
+let select = document.getElementById(selectId)
+let img = document.getElementById(imgId)
 
-    let total = 0;
-    let linhas = [];
-    linhas.push(`Pedido do catálogo (ID ${pedidoId}):`);
-    linhas.push("");
+let novaImagem = select.value
 
-    carrinho.forEach(item => {
-      const subtotal = item.preco * item.quantidade;
-      total += subtotal;
-      linhas.push(`- ${item.nome} x${item.quantidade} — R$ ${subtotal.toFixed(2)}`);
-    });
+if(!novaImagem){
+return
+}
 
-    linhas.push("");
-    linhas.push(`Total: R$ ${total.toFixed(2)}`);
-    linhas.push("");
-    linhas.push("Oi 😊 fiz esse pedido pelo catálogo e gostaria de saber mais.");
+img.src = "imagens/" + pasta + "/" + novaImagem
 
-    return linhas.join("\n");
-  }
+img.onerror = function(){
+this.onerror = null
+this.src = "imagens/sem-imagem.jpg"
+}
 
-  async function gerarPedidoECopiar(){
-    if(carrinho.length === 0){
-      alert("Carrinho vazio.");
-      return;
-    }
+// 🔥 MOSTRAR ESTOQUE DA OPÇÃO
+let id = selectId.replace("op","")
+mostrarEstoque("stock" + id)
 
-    const texto = gerarPedidoTexto();
-    const campo = document.getElementById("resumoPedido");
-    campo.value = texto;
+}
 
-    try{
-      await navigator.clipboard.writeText(texto);
-      alert("Pedido gerado e copiado. Agora abra o Instagram e cole no Direct da loja.");
-      return;
-    } catch(e){}
 
-    campo.focus();
-    campo.select();
-    const ok = document.execCommand("copy");
+function mostrarEstoque(stockId){
 
-    if(ok){
-      alert("Pedido gerado e copiado. Agora abra o Instagram e cole no Direct da loja.");
-    } else {
-      alert("Pedido gerado, mas não consegui copiar automaticamente. Copie o texto manualmente.");
-    }
-  }
+let id = stockId.replace("stock","")
+let select = document.getElementById("op"+id)
+let div = document.getElementById(stockId)
+let dados = estoques[stockId]
 
-  function limparCarrinho(){
-    carrinho = [];
-    atualizarCarrinho();
-    atualizarContadorCarrinho();
-    document.getElementById("resumoPedido").value = "";
-  }
+// 🔥 se tiver opção selecionada
+if(select && select.selectedIndex > 0){
 
-  atualizarCarrinho();
-  atualizarContadorCarrinho();
+let opcao = select.options[select.selectedIndex].text
+let qtd = dados[opcao] || 0
+
+if(qtd <= 0){
+div.innerHTML = `🔴 ${opcao}: Esgotado`
+}else{
+div.innerHTML = `🟢 ${opcao}: ${qtd}`
+}
+
+return
+}
+
+div.innerHTML = `<b>Selecione uma opção</b>`
+
+}
+
+function mostrarEstoqueOpcao(stockId, opcao){
+
+let div = document.getElementById(stockId)
+let dados = estoques[stockId]
+
+let qtd = dados[opcao] || 0
+
+let html = `<b>Estoque:</b><br><br>`
+
+if(qtd <= 0){
+html += `🔴 ${opcao}: Esgotado`
+}else{
+html += `🟢 ${opcao}: ${qtd}`
+}
+
+div.innerHTML = html
+}
+
+
+let tempoReserva = 5 * 60 * 1000 // 5 minutos
+
+function toggleCarrinho(){
+let c=document.getElementById("cartPanel")
+c.style.display=c.style.display==="block"?"none":"block"
+}
+
+function atualizarCarrinho(){
+
+let lista=document.getElementById("lista")
+lista.innerHTML=""
+
+let total=0
+let qtd=0
+
+carrinho.forEach((item,index)=>{
+
+let sub=item.preco*item.qtd
+total+=sub
+qtd+=item.qtd
+
+lista.innerHTML+=`
+<div class="cartItem">
+<div>
+${item.nome}<br>
+R$ ${item.preco.toFixed(2)}
+</div>
+
+<div class="qtyControls">
+<button class="qtyBtn" onclick="diminuir(${index})">-</button>
+<b>${item.qtd}</b>
+<button class="qtyBtn" onclick="aumentar(${index})">+</button>
+<button class="removeBtn" onclick="remover(${index})">X</button>
+</div>
+</div>
+`
+})
+
+let taxa=parseFloat(document.getElementById("entrega").value || 0)
+
+total+=taxa
+
+document.getElementById("total").innerText=total.toFixed(2)
+document.getElementById("cartBadge").innerText=qtd
+
+}
+
+function addProduto(nome,preco,selectId,stockId){
+
+let select = document.getElementById(selectId)
+let opcaoTexto = select.options[select.selectedIndex].text
+
+if(opcaoTexto === "Opções"){
+alert("Selecione uma opção")
+return
+}
+
+if(estoques[stockId][opcaoTexto] <= 0){
+alert("Produto esgotado")
+return
+}
+
+estoques[stockId][opcaoTexto]--
+
+let nomeFinal = nome + " – " + opcaoTexto
+
+let item = carrinho.find(i=>i.nome===nomeFinal)
+
+if(item){
+item.qtd++
+}else{
+
+carrinho.push({
+nome:nomeFinal,
+preco:preco,
+qtd:1,
+stockId:stockId,
+opcao:opcaoTexto,
+tempo: Date.now()
+})
+}
+
+mostrarEstoque(stockId)
+atualizarSelect(selectId, stockId)
+atualizarCarrinho()
+salvarDados()
+
+}
+
+function aumentar(i){
+
+let item = carrinho[i]
+
+if(estoques[item.stockId][item.opcao] <= 0) return
+
+item.qtd++
+estoques[item.stockId][item.opcao]--
+
+item.tempo = Date.now()
+
+mostrarEstoque(item.stockId)
+let id = item.stockId.replace("stock","")
+atualizarSelect("op"+id, item.stockId)
+atualizarCarrinho()
+salvarDados()
+
+}
+
+function diminuir(i){
+
+let item = carrinho[i]
+
+item.qtd--
+estoques[item.stockId][item.opcao]++
+
+if(item.qtd<=0){
+carrinho.splice(i,1)
+}
+
+mostrarEstoque(item.stockId)
+let id = item.stockId.replace("stock","")
+atualizarSelect("op"+id, item.stockId)
+atualizarCarrinho()
+salvarDados()
+
+}
+
+function remover(i){
+
+let item = carrinho[i]
+
+estoques[item.stockId][item.opcao]+=item.qtd
+
+carrinho.splice(i,1)
+
+mostrarEstoque(item.stockId)
+let id = item.stockId.replace("stock","")
+atualizarSelect("op"+id, item.stockId)
+atualizarCarrinho()
+salvarDados()
+
+}
+
+function limparCarrinho(){
+carrinho.forEach(item=>{
+estoques[item.stockId][item.opcao] += item.qtd
+})
+
+carrinho=[]
+
+for(let stockId in estoques){
+mostrarEstoque(stockId)
+
+let id = stockId.replace("stock","")
+atualizarSelect("op"+id, stockId)
+}
+
+atualizarCarrinho()
+salvarDados()
+}
+
+function gerarPedido(){
+
+if(carrinho.length==0){
+alert("Carrinho vazio")
+return
+}
+
+let pagamento=document.getElementById("pagamento").value
+let taxa=parseFloat(document.getElementById("entrega").value || 0)
+
+let texto="Pedido\n\n"
+let total=0
+
+carrinho.forEach(i=>{
+let sub=i.preco*i.qtd
+total+=sub
+texto+=`${i.nome}\n${i.qtd}Un R$ ${i.preco.toFixed(2)}\n\n`
+})
+
+total+=taxa
+
+texto+=`Entrega: R$ ${taxa.toFixed(2)}\n`
+texto+=`Pagamento: ${pagamento}\n`
+texto+=`Total: R$ ${total.toFixed(2)}`
+
+document.getElementById("pedido").value=texto
+navigator.clipboard.writeText(texto)
+
+alert("Pedido copiado!")
+}
+
+
+function atualizarSelect(selectId, stockId){
+
+let select = document.getElementById(selectId)
+let dados = estoques[stockId]
+
+for(let i=0;i<select.options.length;i++){
+
+let op = select.options[i].text.replace(" (Esgotado)","")
+
+if(dados[op] <= 0){
+select.options[i].disabled = true
+select.options[i].text = op + " (Esgotado)"
+}else{
+select.options[i].disabled = false
+select.options[i].text = op
+}
+
+}
+
+}
+
+function limparReservas(){
+
+let agora = Date.now()
+
+for(let i = carrinho.length -1; i >= 0; i--){
+
+let item = carrinho[i]
+
+if(agora - item.tempo > tempoReserva){
+
+// devolve estoque
+estoques[item.stockId][item.opcao] += item.qtd
+
+// remove do carrinho
+carrinho.splice(i,1)
+
+}
+
+}
+
+for(let stockId in estoques){
+mostrarEstoque(stockId)
+atualizarSelect(stockId.replace("stock","op"), stockId)
+}
+
+atualizarCarrinho()
+salvarDados()
+
+}
+
+
+function salvarDados(){
+localStorage.setItem("estoques", JSON.stringify(estoques))
+}
+
+function carregarDados(){
+let dados = localStorage.getItem("estoques")
+if(dados){
+estoques = JSON.parse(dados)
+}
+}
+
+// ===== ADMIN OCULTO =====
+
+let senhaAdmin = "1234"
+
+document.addEventListener("keydown", function(e){
+
+// tecla secreta: CTRL + ALT + A
+if(e.ctrlKey && e.altKey && e.key.toLowerCase() === "a"){
+
+let senha = prompt("Senha do administrador:")
+
+if(senha === senhaAdmin){
+abrirAdmin()
+}else{
+alert("Senha incorreta")
+}
+
+}
+
+})
+
+function abrirAdmin(){
+
+let painel = document.createElement("div")
+
+painel.style.position = "fixed"
+painel.style.top = "50%"
+painel.style.left = "50%"
+painel.style.transform = "translate(-50%,-50%)"
+painel.style.background = "#fff"
+painel.style.padding = "20px"
+painel.style.borderRadius = "10px"
+painel.style.boxShadow = "0 0 20px rgba(0,0,0,0.3)"
+painel.style.zIndex = "9999"
+painel.style.width = "320px"
+painel.style.maxHeight = "90%"
+painel.style.overflowY = "auto"
+
+let html = "<h3>ADMIN</h3>"
+
+// ===== ESTOQUE =====
+for(let stockId in estoques){
+
+html += "<b>"+stockId+"</b><br>"
+
+for(let op in estoques[stockId]){
+
+html += `
+${op}: <input type="number" value="${estoques[stockId][op]}" id="adm_${stockId}_${op}" style="width:60px"><br>
+`
+
+}
+
+html += "<br>"
+}
+
+html += `<hr><h4>Produtos</h4>`
+
+produtos.forEach((p, index)=>{
+
+html += `
+<div style="border:1px solid #ccc;padding:5px;margin-bottom:8px">
+
+<b>Produto ${index+1}</b><br>
+
+Nome: <input id="p_nome_${index}" value="${p.nome}"><br>
+Marca: <input id="p_marca_${index}" value="${p.marca}"><br>
+Preço: <input type="number" id="p_preco_${index}" value="${p.preco}"><br>
+Pasta: <input id="p_pasta_${index}" value="${p.pasta}"><br>
+Imagem: <input id="p_imagem_${index}" value="${p.imagem}"><br>
+Opções: <input id="p_opcoes_${index}" value="${p.opcoes.join(",")}"><br>
+
+<button onclick="removerProduto(${index})" style="background:red;color:white;border:none;padding:5px;border-radius:5px;margin-top:5px;">
+Excluir Produto
+</button>
+
+</div>
+`
+})
+
+// ===== NOVO PRODUTO =====
+html += `
+<hr>
+<h4>Novo Produto</h4>
+
+<input id="novo_nome" placeholder="Nome"><br><br>
+<input id="novo_marca" placeholder="Marca"><br><br>
+<input id="novo_preco" type="number" placeholder="Preço"><br><br>
+<input id="novo_pasta" placeholder="Nome da pasta da imagem"><br><br>
+<input id="novo_opcoes" placeholder="Opções (ex: Azul,Verde,Rosa)"><br><br>
+<input id="novo_imagem" placeholder="Imagem principal (ex: 1.jpg)">
+`
+
+html += `
+<button onclick="salvarAdmin()">Salvar Estoque</button>
+<button onclick="salvarEdicaoProdutos()">Salvar Produtos</button>
+<button onclick="criarProduto()">Criar Produto</button>
+<button onclick="fecharAdmin()">Fechar</button>
+`
+
+painel.innerHTML = html
+
+document.body.appendChild(painel)
+
+window.painelAdmin = painel
+}
+
+function criarProduto(){
+
+let nome = document.getElementById("novo_nome").value
+let marca = document.getElementById("novo_marca").value
+let preco = parseFloat(document.getElementById("novo_preco").value)
+let pasta = document.getElementById("novo_pasta").value
+let opcoes = document.getElementById("novo_opcoes").value.split(",").map(o => o.trim())
+let imagem = document.getElementById("novo_imagem").value
+
+if(!nome || !marca || !preco || !pasta || !imagem || opcoes.length == 0){
+alert("Preencha tudo")
+return
+}
+
+let novo = {
+nome: nome,
+marca: marca,
+preco: preco,
+pasta: pasta,
+imagem: imagem, // 🔥 AGORA CERTO
+id: (produtos.length + 1).toString(),
+opcoes: opcoes.map(o=>o.trim())
+}
+
+produtos.push(novo)
+
+
+
+// cria estoque automático
+let stockId = "stock" + produtos.length
+estoques[stockId] = {}
+
+opcoes.forEach(op=>{
+estoques[stockId][op.trim()] = 0
+})
+
+// salva tudo
+salvarProdutos()
+salvarDados()
+
+// recria catálogo
+gerarProdutos()
+
+produtos.forEach((p, index)=>{
+let id = index + 1
+mostrarEstoque("stock"+id)
+atualizarSelect("op"+id,"stock"+id)
+})
+
+alert("Produto criado!")
+
+fecharAdmin()
+}
+
+function salvarEdicaoProdutos(){
+
+produtos.forEach((p, index)=>{
+
+let nome = document.getElementById(`p_nome_${index}`).value
+let marca = document.getElementById(`p_marca_${index}`).value
+let preco = parseFloat(document.getElementById(`p_preco_${index}`).value)
+let pasta = document.getElementById(`p_pasta_${index}`).value
+let imagem = document.getElementById(`p_imagem_${index}`).value || "1.jpg"
+let opcoes = document.getElementById(`p_opcoes_${index}`).value.split(",")
+
+produtos[index] = {
+nome: nome,
+marca: marca,
+preco: preco,
+pasta: pasta,
+imagem: imagem,
+id: (index+1).toString(),
+opcoes: opcoes.map(o=>o.trim())
+}
+
+// 🔥 ATUALIZA ESTOQUE SE MUDAR OPÇÕES
+let stockId = "stock" + (index+1)
+
+if(!estoques[stockId]){
+estoques[stockId] = {}
+}
+
+let novoEstoque = {}
+
+opcoes.forEach(op=>{
+op = op.trim()
+novoEstoque[op] = estoques[stockId][op] || 0
+})
+
+estoques[stockId] = novoEstoque
+
+})
+
+// salva
+salvarProdutos()
+salvarDados()
+
+// recria tela
+gerarProdutos()
+
+produtos.forEach((p, index)=>{
+let id = index + 1
+mostrarEstoque("stock"+id)
+atualizarSelect("op"+id,"stock"+id)
+})
+
+alert("Produtos atualizados!")
+
+fecharAdmin()
+}
+
+function removerProduto(index){
+
+let confirmar = confirm("Tem certeza que deseja excluir este produto?")
+if(!confirmar) return
+
+// 🔥 remove produto
+produtos.splice(index,1)
+
+// 🔥 remove estoque correspondente
+let novoEstoques = {}
+
+produtos.forEach((p, i)=>{
+let antigoId = "stock" + (i+1)
+let novoId = "stock" + (i+1)
+
+// mantém estoque se existir
+novoEstoques[novoId] = estoques[antigoId] || {}
+})
+
+estoques = novoEstoques
+
+// 🔥 salva tudo
+salvarProdutos()
+salvarDados()
+
+// 🔥 recria catálogo
+gerarProdutos()
+
+produtos.forEach((p, i)=>{
+let id = i + 1
+mostrarEstoque("stock"+id)
+atualizarSelect("op"+id,"stock"+id)
+})
+
+alert("Produto removido!")
+
+fecharAdmin()
+}
+
+function fecharAdmin(){
+painelAdmin.remove()
+}
+
+function salvarAdmin(){
+
+for(let stockId in estoques){
+for(let op in estoques[stockId]){
+
+let campo = document.getElementById(`adm_${stockId}_${op}`)
+estoques[stockId][op] = parseInt(campo.value) || 0
+
+}
+}
+
+salvarDados() // 🔥 salva de verdade
+
+// atualiza tela
+for(let stockId in estoques){
+mostrarEstoque(stockId)
+
+let id = stockId.replace("stock","")
+atualizarSelect("op"+id, stockId)
+}
+
+alert("Estoque atualizado!")
+
+fecharAdmin()
+
+}
+
+window.onload = function(){
+
+carregarDados()
+carregarProdutos() // 🔥 NOVO
+
+gerarProdutos()
+
+produtos.forEach((p, index)=>{
+let id = index + 1
+
+// cria estoque se não existir
+if(!estoques["stock"+id]){
+estoques["stock"+id] = {}
+p.opcoes.forEach(op=>{
+estoques["stock"+id][op] = 0
+})
+}
+
+mostrarEstoque("stock"+id)
+atualizarSelect("op"+id,"stock"+id)
+})
+
+}
+
+setInterval(limparReservas, 5000) // verifica a cada 5 segundos
+
 </script>
 
 </body>
