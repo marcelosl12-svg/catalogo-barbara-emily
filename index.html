@@ -323,10 +323,6 @@ import {
   doc
 } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js";
 
-// Import the functions you need from the SDKs you need
-import { initializeApp } from "firebase/app";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
@@ -339,7 +335,6 @@ const firebaseConfig = {
 };
 
 // Initialize Firebase
-const app = initializeApp(firebaseConfig);
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
@@ -1037,28 +1032,7 @@ window.onload = async function () {
   await carregarProdutosFirebase();
 };
 
-carregarDados()
-carregarProdutos() // 🔥 NOVO
-
-gerarProdutos()
-
-produtos.forEach((p, index)=>{
-let id = index + 1
-
-// cria estoque se não existir
-if(!estoques["stock"+id]){
-estoques["stock"+id] = {}
-p.opcoes.forEach(op=>{
-estoques["stock"+id][op] = 0
-})
-}
-
-mostrarEstoque("stock"+id)
-atualizarSelect("op"+id,"stock"+id)
-})
-
-
-setInterval(limparReservas, 5000) // verifica a cada 5 segundos
+setInterval(limparReservas, 5000);
 
 </script>
 
