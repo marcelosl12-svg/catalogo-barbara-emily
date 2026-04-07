@@ -846,40 +846,43 @@ document.body.appendChild(painel)
 window.painelAdmin = painel
 }
 
-async function criarProduto() {
+window.criarProduto = async function () {
   let nome = document.getElementById("novo_nome").value;
   let marca = document.getElementById("novo_marca").value;
   let preco = parseFloat(document.getElementById("novo_preco").value);
   let pasta = document.getElementById("novo_pasta").value;
-  let opcoes = document.getElementById("novo_opcoes").value.split(",").map(o => o.trim()).filter(o => o);
+  let opcoes = document.getElementById("novo_opcoes").value
+    .split(",")
+    .map(o => o.trim())
+    .filter(o => o);
   let imagem = document.getElementById("novo_imagem").value;
 
-  if (!nome || !marca || !preco || !pasta || !imagem || opcoes.length === 0) {
+  if (!nome || !marca || isNaN(preco) || !pasta || !imagem || opcoes.length === 0) {
     alert("Preencha tudo");
     return;
   }
 
   let novo = {
-    nome: nome,
-    marca: marca,
-    preco: preco,
-    pasta: pasta,
-    imagem: imagem,
-    opcoes: opcoes
+    nome,
+    marca,
+    preco,
+    pasta,
+    imagem,
+    opcoes
   };
 
   try {
     await addDoc(collection(db, "Produtos"), novo);
     alert("Produto criado no Firebase!");
-    fecharAdmin();
     await carregarProdutosFirebase();
+    window.fecharAdmin();
   } catch (erro) {
     console.error("Erro ao criar produto:", erro);
     alert("Erro ao criar produto no Firebase.");
   }
-}
+};
 
-async function salvarEdicaoProdutos() {
+window.salvarEdicaoProdutos = async function () {
   try {
     for (let index = 0; index < produtos.length; index++) {
       let p = produtos[index];
@@ -895,67 +898,50 @@ async function salvarEdicaoProdutos() {
         .filter(o => o);
 
       await updateDoc(doc(db, "Produtos", p.id), {
-        nome: nome,
-        marca: marca,
-        preco: preco,
-        pasta: pasta,
-        imagem: imagem,
-        opcoes: opcoes
+        nome,
+        marca,
+        preco,
+        pasta,
+        imagem,
+        opcoes
       });
     }
 
     alert("Produtos atualizados no Firebase!");
-    fecharAdmin();
     await carregarProdutosFirebase();
+    window.fecharAdmin();
   } catch (erro) {
     console.error("Erro ao salvar edição:", erro);
     alert("Erro ao atualizar produtos no Firebase.");
   }
-}
+};
 
-async function removerProduto(index) {
+window.removerProduto = async function (index) {
   let confirmar = confirm("Tem certeza que deseja excluir este produto?");
   if (!confirmar) return;
 
   try {
     let produtoId = produtos[index].id;
     await deleteDoc(doc(db, "Produtos", produtoId));
-
     alert("Produto removido do Firebase!");
-    fecharAdmin();
     await carregarProdutosFirebase();
+    window.fecharAdmin();
   } catch (erro) {
     console.error("Erro ao remover produto:", erro);
     alert("Erro ao remover produto do Firebase.");
   }
-}
+};
 
-function salvarAdmin(){
+window.fecharAdmin = function () {
+  if (window.painelAdmin) {
+    window.painelAdmin.remove();
+    window.painelAdmin = null;
+  }
+};
 
-for(let stockId in estoques){
-for(let op in estoques[stockId]){
-
-let campo = document.getElementById(`adm_${stockId}_${op}`)
-estoques[stockId][op] = parseInt(campo.value) || 0
-
-}
-}
-
-salvarDados() // 🔥 salva de verdade
-
-// atualiza tela
-for(let stockId in estoques){
-mostrarEstoque(stockId)
-
-let id = stockId.replace("stock","")
-atualizarSelect("op"+id, stockId)
-}
-
-alert("Estoque atualizado!")
-
-fecharAdmin()
-
-}
+window.salvarAdmin = function () {
+  alert("O estoque ainda não está online nesta etapa.");
+};
 
 window.onload = async function () {
   carregarDados();
