@@ -310,30 +310,33 @@ Abrir Instagram
 <!-- MODAL -->
 
 
-<script>
+<script type="module">
 
-let carrinho=[]
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js";
+import {
+  getFirestore,
+  collection,
+  getDocs,
+  addDoc,
+  updateDoc,
+  deleteDoc,
+  doc
+} from "https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js";
 
-let produtos = [
-{
-nome: "Hidratante Labial",
-marca: "Sarah’s Beauty",
-preco: 6.5,
-pasta: "Hidratante-Labial",
-imagem: "1.jpg",
-id: "1",
-opcoes: ["Morango","Melancia"]
-},
-{
-nome: "Candy pop lip gloss",
-marca: "Lua&Neve",
-preco: 8.0,
-pasta: "Candy-pop-lip-gloss",
-imagem: "2.jpg",
-id: "2",
-opcoes: ["Roxo","Rosa"]
-}
-]
+const firebaseConfig = {
+  apiKey: "SUA_API_KEY",
+  authDomain: "SEU_PROJETO.firebaseapp.com",
+  projectId: "SEU_PROJECT_ID",
+  storageBucket: "SEU_PROJETO.firebasestorage.app",
+  messagingSenderId: "SEU_SENDER_ID",
+  appId: "SEU_APP_ID"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+let carrinho = [];
+let produtos = [];
 
 // salvar produtos
 function salvarProdutos(){
@@ -353,48 +356,66 @@ stock1: { Morango: 2, Melancia: 1 },
 stock2: { Roxo: 4, Rosa: 3 }
 }
 
-function gerarProdutos(){
+// 🔥 CARREGAR PRODUTOS DO FIREBASE
+async function carregarProdutosFirebase() {
+  const snapshot = await getDocs(collection(db, "Produtos"));
 
-let container = document.getElementById("produtosContainer")
-container.innerHTML = ""
+  produtos = snapshot.docs.map(docSnap => ({
+    id: docSnap.id,
+    ...docSnap.data()
+  }));
 
-produtos.forEach((p, index)=>{
+  gerarProdutos();
 
-let id = index + 1
+  produtos.forEach((p, index) => {
+    let id = index + 1;
 
-let opcoesHTML = `<option value="">Opções</option>`
+    if (!estoques["stock" + id]) {
+      estoques["stock" + id] = {};
+      p.opcoes.forEach(op => {
+        estoques["stock" + id][op] = 0;
+      });
+    }
 
-p.opcoes.forEach(op=>{
-opcoesHTML += `<option value="${op}.jpg">${op}</option>`
-})
+    mostrarEstoque("stock" + id);
+    atualizarSelect("op" + id, "stock" + id);
+  });
+}
 
-container.innerHTML += `
-<div class="card">
+function gerarProdutos() {
+  let container = document.getElementById("produtosContainer");
+  container.innerHTML = "";
 
-<img id="img${id}" 
-src="imagens/${p.pasta}/${p.imagem}"
-onerror="this.onerror=null; this.src='imagens/sem-imagem.jpg'">
+  produtos.forEach((p, index) => {
+    let idTela = index + 1;
 
-<h3>${p.nome} - ${p.marca}</h3>
+    let opcoesHTML = `<option value="">Opções</option>`;
+    p.opcoes.forEach(op => {
+      opcoesHTML += `<option value="${op}.jpg">${op}</option>`;
+    });
 
-<div class="price">R$ ${p.preco.toFixed(2)}</div>
+    container.innerHTML += `
+      <div class="card">
+        <img id="img${idTela}" 
+          src="imagens/${p.pasta}/${p.imagem}"
+          onerror="this.onerror=null; this.src='imagens/sem-imagem.jpg'">
 
-<div class="stock" id="stock${id}"></div>
+        <h3>${p.nome} - ${p.marca}</h3>
 
-<select id="op${id}" onchange="trocarImagem('op${id}','img${id}','${p.pasta}')">
-${opcoesHTML}
-</select>
+        <div class="price">R$ ${Number(p.preco).toFixed(2)}</div>
 
-<button class="btn"
-onclick="addProduto('${p.nome}',${p.preco},'op${id}','stock${id}')">
-Adicionar
-</button>
+        <div class="stock" id="stock${idTela}"><b>Selecione uma opção</b></div>
 
-</div>
-`
+        <select id="op${idTela}" onchange="trocarImagem('op${idTela}','img${idTela}','${p.pasta}')">
+          ${opcoesHTML}
+        </select>
 
-})
-
+        <button class="btn" onclick="addProduto('${p.id}','op${idTela}')">
+          Adicionar
+        </button>
+      </div>
+    `;
+  });
 }
 
 function trocarImagem(selectId, imgId, pasta){
@@ -514,47 +535,38 @@ document.getElementById("cartBadge").innerText=qtd
 
 }
 
-function addProduto(nome,preco,selectId,stockId){
+window.addProduto = function(produtoId, selectId) {
+  let produto = produtos.find(p => p.id === produtoId);
+  if (!produto) return;
 
-let select = document.getElementById(selectId)
-let opcaoTexto = select.options[select.selectedIndex].text
+  let select = document.getElementById(selectId);
+  let opcaoTexto = select.options[select.selectedIndex].text;
 
-if(opcaoTexto === "Opções"){
-alert("Selecione uma opção")
-return
-}
+  if (!opcaoTexto || opcaoTexto === "Opções") {
+    alert("Selecione uma opção");
+    return;
+  }
 
-if(estoques[stockId][opcaoTexto] <= 0){
-alert("Produto esgotado")
-return
-}
+  let nomeFinal = produto.nome + " – " + opcaoTexto;
 
-estoques[stockId][opcaoTexto]--
+  let item = carrinho.find(i => i.nome === nomeFinal);
 
-let nomeFinal = nome + " – " + opcaoTexto
+  if (item) {
+    item.qtd++;
+    item.tempo = Date.now();
+  } else {
+    carrinho.push({
+      produtoId: produto.id,
+      nome: nomeFinal,
+      preco: Number(produto.preco),
+      qtd: 1,
+      opcao: opcaoTexto,
+      tempo: Date.now()
+    });
+  }
 
-let item = carrinho.find(i=>i.nome===nomeFinal)
-
-if(item){
-item.qtd++
-}else{
-
-carrinho.push({
-nome:nomeFinal,
-preco:preco,
-qtd:1,
-stockId:stockId,
-opcao:opcaoTexto,
-tempo: Date.now()
-})
-}
-
-mostrarEstoque(stockId)
-atualizarSelect(selectId, stockId)
-atualizarCarrinho()
-salvarDados()
-
-}
+  atualizarCarrinho();
+};
 
 function aumentar(i){
 
@@ -1011,7 +1023,10 @@ fecharAdmin()
 
 }
 
-window.onload = function(){
+window.onload = async function () {
+  carregarDados();
+  await carregarProdutosFirebase();
+};
 
 carregarDados()
 carregarProdutos() // 🔥 NOVO
@@ -1033,7 +1048,6 @@ mostrarEstoque("stock"+id)
 atualizarSelect("op"+id,"stock"+id)
 })
 
-}
 
 setInterval(limparReservas, 5000) // verifica a cada 5 segundos
 
