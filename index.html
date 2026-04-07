@@ -846,158 +846,88 @@ document.body.appendChild(painel)
 window.painelAdmin = painel
 }
 
-function criarProduto(){
+async function criarProduto() {
+  let nome = document.getElementById("novo_nome").value;
+  let marca = document.getElementById("novo_marca").value;
+  let preco = parseFloat(document.getElementById("novo_preco").value);
+  let pasta = document.getElementById("novo_pasta").value;
+  let opcoes = document.getElementById("novo_opcoes").value.split(",").map(o => o.trim()).filter(o => o);
+  let imagem = document.getElementById("novo_imagem").value;
 
-let nome = document.getElementById("novo_nome").value
-let marca = document.getElementById("novo_marca").value
-let preco = parseFloat(document.getElementById("novo_preco").value)
-let pasta = document.getElementById("novo_pasta").value
-let opcoes = document.getElementById("novo_opcoes").value.split(",").map(o => o.trim())
-let imagem = document.getElementById("novo_imagem").value
+  if (!nome || !marca || !preco || !pasta || !imagem || opcoes.length === 0) {
+    alert("Preencha tudo");
+    return;
+  }
 
-if(!nome || !marca || !preco || !pasta || !imagem || opcoes.length == 0){
-alert("Preencha tudo")
-return
+  let novo = {
+    nome: nome,
+    marca: marca,
+    preco: preco,
+    pasta: pasta,
+    imagem: imagem,
+    opcoes: opcoes
+  };
+
+  try {
+    await addDoc(collection(db, "Produtos"), novo);
+    alert("Produto criado no Firebase!");
+    fecharAdmin();
+    await carregarProdutosFirebase();
+  } catch (erro) {
+    console.error("Erro ao criar produto:", erro);
+    alert("Erro ao criar produto no Firebase.");
+  }
 }
 
-let novo = {
-nome: nome,
-marca: marca,
-preco: preco,
-pasta: pasta,
-imagem: imagem, // 🔥 AGORA CERTO
-id: (produtos.length + 1).toString(),
-opcoes: opcoes.map(o=>o.trim())
+async function salvarEdicaoProdutos() {
+  try {
+    for (let index = 0; index < produtos.length; index++) {
+      let p = produtos[index];
+
+      let nome = document.getElementById(`p_nome_${index}`).value;
+      let marca = document.getElementById(`p_marca_${index}`).value;
+      let preco = parseFloat(document.getElementById(`p_preco_${index}`).value);
+      let pasta = document.getElementById(`p_pasta_${index}`).value;
+      let imagem = document.getElementById(`p_imagem_${index}`).value || "1.jpg";
+      let opcoes = document.getElementById(`p_opcoes_${index}`).value
+        .split(",")
+        .map(o => o.trim())
+        .filter(o => o);
+
+      await updateDoc(doc(db, "Produtos", p.id), {
+        nome: nome,
+        marca: marca,
+        preco: preco,
+        pasta: pasta,
+        imagem: imagem,
+        opcoes: opcoes
+      });
+    }
+
+    alert("Produtos atualizados no Firebase!");
+    fecharAdmin();
+    await carregarProdutosFirebase();
+  } catch (erro) {
+    console.error("Erro ao salvar edição:", erro);
+    alert("Erro ao atualizar produtos no Firebase.");
+  }
 }
 
-produtos.push(novo)
+async function removerProduto(index) {
+  let confirmar = confirm("Tem certeza que deseja excluir este produto?");
+  if (!confirmar) return;
 
+  try {
+    let produtoId = produtos[index].id;
+    await deleteDoc(doc(db, "Produtos", produtoId));
 
-
-// cria estoque automático
-let stockId = "stock" + produtos.length
-estoques[stockId] = {}
-
-opcoes.forEach(op=>{
-estoques[stockId][op.trim()] = 0
-})
-
-// salva tudo
-salvarProdutos()
-salvarDados()
-
-// recria catálogo
-gerarProdutos()
-
-produtos.forEach((p, index)=>{
-let id = index + 1
-mostrarEstoque("stock"+id)
-atualizarSelect("op"+id,"stock"+id)
-})
-
-alert("Produto criado!")
-
-fecharAdmin()
-}
-
-function salvarEdicaoProdutos(){
-
-produtos.forEach((p, index)=>{
-
-let nome = document.getElementById(`p_nome_${index}`).value
-let marca = document.getElementById(`p_marca_${index}`).value
-let preco = parseFloat(document.getElementById(`p_preco_${index}`).value)
-let pasta = document.getElementById(`p_pasta_${index}`).value
-let imagem = document.getElementById(`p_imagem_${index}`).value || "1.jpg"
-let opcoes = document.getElementById(`p_opcoes_${index}`).value.split(",")
-
-produtos[index] = {
-nome: nome,
-marca: marca,
-preco: preco,
-pasta: pasta,
-imagem: imagem,
-id: (index+1).toString(),
-opcoes: opcoes.map(o=>o.trim())
-}
-
-// 🔥 ATUALIZA ESTOQUE SE MUDAR OPÇÕES
-let stockId = "stock" + (index+1)
-
-if(!estoques[stockId]){
-estoques[stockId] = {}
-}
-
-let novoEstoque = {}
-
-opcoes.forEach(op=>{
-op = op.trim()
-novoEstoque[op] = estoques[stockId][op] || 0
-})
-
-estoques[stockId] = novoEstoque
-
-})
-
-// salva
-salvarProdutos()
-salvarDados()
-
-// recria tela
-gerarProdutos()
-
-produtos.forEach((p, index)=>{
-let id = index + 1
-mostrarEstoque("stock"+id)
-atualizarSelect("op"+id,"stock"+id)
-})
-
-alert("Produtos atualizados!")
-
-fecharAdmin()
-}
-
-function removerProduto(index){
-
-let confirmar = confirm("Tem certeza que deseja excluir este produto?")
-if(!confirmar) return
-
-// 🔥 remove produto
-produtos.splice(index,1)
-
-// 🔥 remove estoque correspondente
-let novoEstoques = {}
-
-produtos.forEach((p, i)=>{
-let antigoId = "stock" + (i+1)
-let novoId = "stock" + (i+1)
-
-// mantém estoque se existir
-novoEstoques[novoId] = estoques[antigoId] || {}
-})
-
-estoques = novoEstoques
-
-// 🔥 salva tudo
-salvarProdutos()
-salvarDados()
-
-// 🔥 recria catálogo
-gerarProdutos()
-
-produtos.forEach((p, i)=>{
-let id = i + 1
-mostrarEstoque("stock"+id)
-atualizarSelect("op"+id,"stock"+id)
-})
-
-alert("Produto removido!")
-
-fecharAdmin()
-}
-
-function fecharAdmin(){
-painelAdmin.remove()
+    alert("Produto removido do Firebase!");
+    fecharAdmin();
+    await carregarProdutosFirebase();
+  } catch (erro) {
+    console.error("Erro ao remover produto:", erro);
+    alert("Erro ao remover produto do Firebase.");
+  }
 }
 
 function salvarAdmin(){
