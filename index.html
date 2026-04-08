@@ -374,14 +374,6 @@ function carregarProdutosFirebase() {
 
     produtos.forEach((p, index) => {
       let id = index + 1;
-
-      if (!estoques["stock" + id]) {
-        estoques["stock" + id] = {};
-        p.opcoes.forEach(op => {
-          estoques["stock" + id][op] = 0;
-        });
-      }
-
       mostrarEstoque("stock" + id);
       atualizarSelect("op" + id, "stock" + id);
     });
@@ -452,30 +444,29 @@ mostrarEstoque("stock" + id)
 }
 
 
-function mostrarEstoque(stockId){
+function mostrarEstoque(stockId) {
+  let id = stockId.replace("stock", "");
+  let select = document.getElementById("op" + id);
+  let div = document.getElementById(stockId);
 
-let id = stockId.replace("stock","")
-let select = document.getElementById("op"+id)
-let div = document.getElementById(stockId)
-let dados = estoques[stockId]
+  let produto = produtos[id - 1];
+  if (!produto) return;
 
-// 🔥 se tiver opção selecionada
-if(select && select.selectedIndex > 0){
+  let estoque = produto.estoque || {};
 
-let opcao = select.options[select.selectedIndex].text
-let qtd = dados[opcao] || 0
+  if (select && select.selectedIndex > 0) {
+    let opcao = select.options[select.selectedIndex].text.replace(" (Esgotado)", "");
+    let qtd = estoque[opcao] || 0;
 
-if(qtd <= 0){
-div.innerHTML = `🔴 ${opcao}: Esgotado`
-}else{
-div.innerHTML = `🟢 ${opcao}: ${qtd}`
-}
+    if (qtd <= 0) {
+      div.innerHTML = `🔴 ${opcao}: Esgotado`;
+    } else {
+      div.innerHTML = `🟢 ${opcao}: ${qtd}`;
+    }
+    return;
+  }
 
-return
-}
-
-div.innerHTML = `<b>Selecione uma opção</b>`
-
+  div.innerHTML = `<b>Selecione uma opção</b>`;
 }
 
 function mostrarEstoqueOpcao(stockId, opcao){
@@ -681,25 +672,29 @@ alert("Pedido copiado!")
 }
 
 
-function atualizarSelect(selectId, stockId){
+function atualizarSelect(selectId, stockId) {
+  let select = document.getElementById(selectId);
+  if (!select) return;
 
-let select = document.getElementById(selectId)
-let dados = estoques[stockId]
+  let id = stockId.replace("stock", "");
+  let produto = produtos[id - 1];
+  if (!produto) return;
 
-for(let i=0;i<select.options.length;i++){
+  let estoque = produto.estoque || {};
 
-let op = select.options[i].text.replace(" (Esgotado)","")
+  for (let i = 0; i < select.options.length; i++) {
+    let op = select.options[i].text.replace(" (Esgotado)", "");
 
-if(dados[op] <= 0){
-select.options[i].disabled = true
-select.options[i].text = op + " (Esgotado)"
-}else{
-select.options[i].disabled = false
-select.options[i].text = op
-}
+    if (op === "Opções") continue;
 
-}
-
+    if ((estoque[op] || 0) <= 0) {
+      select.options[i].disabled = true;
+      select.options[i].text = op + " (Esgotado)";
+    } else {
+      select.options[i].disabled = false;
+      select.options[i].text = op;
+    }
+  }
 }
 
 function limparReservas(){
