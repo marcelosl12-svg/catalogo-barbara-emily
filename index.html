@@ -313,10 +313,12 @@ Abrir Instagram
 <script type="module">
 
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js";
-import {
+
+  import {
   getFirestore,
   collection,
   getDocs,
+  onSnapshot,
   addDoc,
   updateDoc,
   deleteDoc,
@@ -361,28 +363,31 @@ stock2: { Roxo: 4, Rosa: 3 }
 }
 
 // 🔥 CARREGAR PRODUTOS DO FIREBASE
-async function carregarProdutosFirebase() {
-  const snapshot = await getDocs(collection(db, "Produtos"));
+function carregarProdutosFirebase() {
+  onSnapshot(collection(db, "Produtos"), (snapshot) => {
+    produtos = snapshot.docs.map(docSnap => ({
+      id: docSnap.id,
+      ...docSnap.data()
+    }));
 
-  produtos = snapshot.docs.map(docSnap => ({
-    id: docSnap.id,
-    ...docSnap.data()
-  }));
+    gerarProdutos();
 
-  gerarProdutos();
+    produtos.forEach((p, index) => {
+      let id = index + 1;
 
-  produtos.forEach((p, index) => {
-    let id = index + 1;
+      if (!estoques["stock" + id]) {
+        estoques["stock" + id] = {};
+        p.opcoes.forEach(op => {
+          estoques["stock" + id][op] = 0;
+        });
+      }
 
-    if (!estoques["stock" + id]) {
-      estoques["stock" + id] = {};
-      p.opcoes.forEach(op => {
-        estoques["stock" + id][op] = 0;
-      });
-    }
-
-    mostrarEstoque("stock" + id);
-    atualizarSelect("op" + id, "stock" + id);
+      mostrarEstoque("stock" + id);
+      atualizarSelect("op" + id, "stock" + id);
+    });
+  }, (erro) => {
+    console.error("Erro ao ouvir produtos do Firebase:", erro);
+    alert("Erro ao atualizar produtos em tempo real.");
   });
 }
 
@@ -943,9 +948,9 @@ window.salvarAdmin = function () {
   alert("O estoque ainda não está online nesta etapa.");
 };
 
-window.onload = async function () {
+window.onload = function () {
   carregarDados();
-  await carregarProdutosFirebase();
+  carregarProdutosFirebase();
 };
 
 setInterval(limparReservas, 5000);
