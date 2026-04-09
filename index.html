@@ -333,6 +333,15 @@ import {
   signOut
 } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-auth.js";
 
+const firebaseConfig = {
+  apiKey: "AIzaSyA0XLQUStr9FIakDjHTMFgiWA4S1o3Jylc",
+  authDomain: "catalogo-be.firebaseapp.com",
+  projectId: "catalogo-be",
+  storageBucket: "catalogo-be.firebasestorage.app",
+  messagingSenderId: "422107892897",
+  appId: "1:422107892897:web:ac978acc8cf83106f174e0"
+};
+
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
@@ -355,32 +364,6 @@ onAuthStateChanged(auth, (user) => {
     console.log("Nenhum admin logado");
   }
 });
-
-window.loginAdmin = async function () {
-  let email = prompt("Email do administrador:");
-  let senha = prompt("Senha:");
-
-  if (!email || !senha) return;
-
-  try {
-    await signInWithEmailAndPassword(auth, email, senha);
-    alert("Login realizado com sucesso!");
-    window.abrirAdmin();
-  } catch (erro) {
-    console.error("Erro no login:", erro);
-    alert("Email ou senha inválidos.");
-  }
-};
-
-// Your web app's Firebase configuration
-const firebaseConfig = {
-  apiKey: "AIzaSyA0XLQUStr9FIakDjHTMFgiWA4S1o3Jylc",
-  authDomain: "catalogo-be.firebaseapp.com",
-  projectId: "catalogo-be",
-  storageBucket: "catalogo-be.firebasestorage.app",
-  messagingSenderId: "422107892897",
-  appId: "1:422107892897:web:ac978acc8cf83106f174e0"
-};
 
 function salvarProdutos(){
 localStorage.setItem("produtos", JSON.stringify(produtos))
@@ -919,8 +902,7 @@ document.addEventListener("keydown", function(e) {
   }
 });
 
-
-function abrirAdmin(){
+window.abrirAdmin = function() {
 
 let painel = document.createElement("div")
 
