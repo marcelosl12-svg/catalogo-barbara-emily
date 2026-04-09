@@ -419,29 +419,23 @@ function gerarProdutos() {
   });
 }
 
-function trocarImagem(selectId, imgId, pasta){
+window.trocarImagem = function (selectId, imgId, pasta) {
+  let select = document.getElementById(selectId);
+  let img = document.getElementById(imgId);
 
-let select = document.getElementById(selectId)
-let img = document.getElementById(imgId)
+  let novaImagem = select.value;
 
-let novaImagem = select.value
+  if (novaImagem) {
+    img.src = "imagens/" + pasta + "/" + novaImagem;
+    img.onerror = function () {
+      this.onerror = null;
+      this.src = "imagens/sem-imagem.jpg";
+    };
+  }
 
-if(!novaImagem){
-return
-}
-
-img.src = "imagens/" + pasta + "/" + novaImagem
-
-img.onerror = function(){
-this.onerror = null
-this.src = "imagens/sem-imagem.jpg"
-}
-
-// 🔥 MOSTRAR ESTOQUE DA OPÇÃO
-let id = selectId.replace("op","")
-mostrarEstoque("stock" + id)
-
-}
+  let id = selectId.replace("op", "");
+  mostrarEstoque("stock" + id);
+};
 
 
 function mostrarEstoque(stockId) {
@@ -531,10 +525,10 @@ async function devolverEstoqueProduto(produtoId, opcao, quantidade = 1) {
 
 let tempoReserva = 5 * 60 * 1000 // 5 minutos
 
-function toggleCarrinho(){
-let c=document.getElementById("cartPanel")
-c.style.display=c.style.display==="block"?"none":"block"
-}
+window.toggleCarrinho = function () {
+  let c = document.getElementById("cartPanel");
+  c.style.display = c.style.display === "block" ? "none" : "block";
+};
 
 function atualizarCarrinho(){
 
@@ -615,24 +609,22 @@ window.addProduto = async function(produtoId, selectId) {
   }
 };
 
-function aumentar(i){
+window.aumentar = async function(index) {
+  let item = carrinho[index];
+  if (!item) return;
 
-let item = carrinho[i]
+  try {
+    await baixarEstoqueProduto(item.produtoId, item.opcao, 1);
 
-if(estoques[item.stockId][item.opcao] <= 0) return
+    item.qtd++;
+    item.tempo = Date.now();
 
-item.qtd++
-estoques[item.stockId][item.opcao]--
-
-item.tempo = Date.now()
-
-mostrarEstoque(item.stockId)
-let id = item.stockId.replace("stock","")
-atualizarSelect("op"+id, item.stockId)
-atualizarCarrinho()
-salvarDados()
-
-}
+    atualizarCarrinho();
+  } catch (erro) {
+    console.error("Erro ao aumentar item:", erro);
+    alert("Produto sem estoque disponível.");
+  }
+};
 
 window.diminuir = async function(index) {
   let item = carrinho[index];
@@ -683,36 +675,35 @@ window.limparCarrinho = async function() {
   }
 };
 
-function gerarPedido(){
+window.gerarPedido = function () {
+  if (carrinho.length == 0) {
+    alert("Carrinho vazio");
+    return;
+  }
 
-if(carrinho.length==0){
-alert("Carrinho vazio")
-return
-}
+  let pagamento = document.getElementById("pagamento").value;
+  let taxa = parseFloat(document.getElementById("entrega").value || 0);
 
-let pagamento=document.getElementById("pagamento").value
-let taxa=parseFloat(document.getElementById("entrega").value || 0)
+  let texto = "Pedido\n\n";
+  let total = 0;
 
-let texto="Pedido\n\n"
-let total=0
+  carrinho.forEach(i => {
+    let sub = i.preco * i.qtd;
+    total += sub;
+    texto += `${i.nome}\n${i.qtd}Un R$ ${i.preco.toFixed(2)}\n\n`;
+  });
 
-carrinho.forEach(i=>{
-let sub=i.preco*i.qtd
-total+=sub
-texto+=`${i.nome}\n${i.qtd}Un R$ ${i.preco.toFixed(2)}\n\n`
-})
+  total += taxa;
 
-total+=taxa
+  texto += `Entrega: R$ ${taxa.toFixed(2)}\n`;
+  texto += `Pagamento: ${pagamento}\n`;
+  texto += `Total: R$ ${total.toFixed(2)}`;
 
-texto+=`Entrega: R$ ${taxa.toFixed(2)}\n`
-texto+=`Pagamento: ${pagamento}\n`
-texto+=`Total: R$ ${total.toFixed(2)}`
+  document.getElementById("pedido").value = texto;
+  navigator.clipboard.writeText(texto);
 
-document.getElementById("pedido").value=texto
-navigator.clipboard.writeText(texto)
-
-alert("Pedido copiado!")
-}
+  alert("Pedido copiado!");
+};
 
 
 function atualizarSelect(selectId, stockId) {
