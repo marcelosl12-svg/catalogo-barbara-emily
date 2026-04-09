@@ -309,11 +309,9 @@ Abrir Instagram
 
 <!-- MODAL -->
 
-
 <script type="module">
 
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js";
-
+ import { initializeApp } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js";
 import {
   getFirestore,
   collection,
@@ -328,6 +326,51 @@ import {
   orderBy
 } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js";
 
+import {
+  getAuth,
+  signInWithEmailAndPassword,
+  onAuthStateChanged,
+  signOut
+} from "https://www.gstatic.com/firebasejs/12.11.0/firebase-auth.js";
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const auth = getAuth(app);
+
+let carrinho = [];
+let produtos = [];
+
+// 🔐 login admin
+let adminLogado = false;
+let adminEmail = "";
+
+onAuthStateChanged(auth, (user) => {
+  if (user) {
+    adminLogado = true;
+    adminEmail = user.email || "";
+    console.log("Admin logado:", adminEmail);
+  } else {
+    adminLogado = false;
+    adminEmail = "";
+    console.log("Nenhum admin logado");
+  }
+});
+
+window.loginAdmin = async function () {
+  let email = prompt("Email do administrador:");
+  let senha = prompt("Senha:");
+
+  if (!email || !senha) return;
+
+  try {
+    await signInWithEmailAndPassword(auth, email, senha);
+    alert("Login realizado com sucesso!");
+    window.abrirAdmin();
+  } catch (erro) {
+    console.error("Erro no login:", erro);
+    alert("Email ou senha inválidos.");
+  }
+};
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
@@ -339,15 +382,6 @@ const firebaseConfig = {
   appId: "1:422107892897:web:ac978acc8cf83106f174e0"
 };
 
-// Initialize Firebase
-
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-
-let carrinho = [];
-let produtos = [];
-
-// salvar produtos
 function salvarProdutos(){
 localStorage.setItem("produtos", JSON.stringify(produtos))
 }
@@ -875,24 +909,16 @@ estoques = JSON.parse(dados)
 
 // ===== ADMIN OCULTO =====
 
-let senhaAdmin = "1234"
+document.addEventListener("keydown", function(e) {
+  if (e.ctrlKey && e.altKey && e.key.toLowerCase() === "a") {
+    if (adminLogado) {
+      window.abrirAdmin();
+    } else {
+      window.loginAdmin();
+    }
+  }
+});
 
-document.addEventListener("keydown", function(e){
-
-// tecla secreta: CTRL + ALT + A
-if(e.ctrlKey && e.altKey && e.key.toLowerCase() === "a"){
-
-let senha = prompt("Senha do administrador:")
-
-if(senha === senhaAdmin){
-abrirAdmin()
-}else{
-alert("Senha incorreta")
-}
-
-}
-
-})
 
 function abrirAdmin(){
 
@@ -970,6 +996,7 @@ html += `
 <button onclick="salvarAdmin()">Salvar Estoque</button>
 <button onclick="salvarEdicaoProdutos()">Salvar Produtos</button>
 <button onclick="criarProduto()">Criar Produto</button>
+<button onclick="logoutAdmin()">Sair</button>
 <button onclick="fecharAdmin()">Fechar</button>
 `
 
@@ -982,6 +1009,35 @@ window.painelAdmin = painel
 window.abrirPedidosAdmin();
 
 }
+
+window.loginAdmin = async function () {
+  let email = prompt("Email admin:");
+  let senha = prompt("Senha:");
+
+  if (!email || !senha) return;
+
+  try {
+    await signInWithEmailAndPassword(auth, email, senha);
+    alert("Login realizado!");
+    window.abrirAdmin();
+  } catch (erro) {
+    console.error("Erro login:", erro);
+    alert("Email ou senha inválidos.");
+  }
+};
+
+window.logoutAdmin = async function () {
+  try {
+    await signOut(auth);
+    alert("Logout realizado.");
+    if (window.painelAdmin) {
+      window.fecharAdmin();
+    }
+  } catch (erro) {
+    console.error("Erro no logout:", erro);
+    alert("Erro ao sair.");
+  }
+};
 
 window.criarProduto = async function () {
   let nome = document.getElementById("novo_nome").value;
