@@ -323,7 +323,9 @@ import {
   deleteDoc,
   doc,
   runTransaction,
-  serverTimestamp
+  serverTimestamp,
+  query,
+  orderBy
 } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js";
 
 
@@ -719,6 +721,64 @@ window.gerarPedido = async function () {
   }
 };
 
+window.abrirPedidosAdmin = function () {
+  let html = `
+    <h2>📦 Pedidos</h2>
+    <div id="listaPedidosAdmin">Carregando...</div>
+  `;
+
+  painelAdmin.innerHTML += html;
+
+  const pedidosRef = query(
+    collection(db, "Pedidos"),
+    orderBy("criadoEm", "desc")
+  );
+
+  onSnapshot(pedidosRef, (snapshot) => {
+    let lista = document.getElementById("listaPedidosAdmin");
+    if (!lista) return;
+
+    let pedidosHTML = "";
+
+    snapshot.forEach((docSnap, index) => {
+      let p = docSnap.data();
+
+      let itens = p.itens.map(i =>
+        `${i.nome} (${i.qtd}x)`
+      ).join("<br>");
+
+      pedidosHTML += `
+        <div style="border:1px solid #ccc; padding:10px; margin:10px 0;">
+          <b>Status:</b> ${p.status}<br>
+          <b>Pagamento:</b> ${p.pagamento}<br>
+          <b>Entrega:</b> ${p.entrega}<br>
+          <b>Total:</b> R$ ${p.total.toFixed(2)}<br>
+          <b>Itens:</b><br>${itens}<br><br>
+
+          <button onclick="concluirPedido('${docSnap.id}')">
+            ✅ Concluir
+          </button>
+        </div>
+      `;
+    });
+
+    lista.innerHTML = pedidosHTML || "Nenhum pedido";
+  });
+};
+
+window.concluirPedido = async function (pedidoId) {
+  try {
+    await updateDoc(doc(db, "Pedidos", pedidoId), {
+      status: "concluido"
+    });
+
+    alert("Pedido concluído!");
+  } catch (erro) {
+    console.error("Erro ao concluir pedido:", erro);
+    alert("Erro ao atualizar pedido.");
+  }
+};
+
 async function salvarPedidoFirebase() {
   if (carrinho.length === 0) {
     throw new Error("Carrinho vazio");
@@ -918,6 +978,9 @@ painel.innerHTML = html
 document.body.appendChild(painel)
 
 window.painelAdmin = painel
+
+window.abrirPedidosAdmin();
+
 }
 
 window.criarProduto = async function () {
