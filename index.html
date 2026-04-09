@@ -314,15 +314,15 @@ Abrir Instagram
 
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js";
 
-  import {
+import {
   getFirestore,
   collection,
-  getDocs,
   onSnapshot,
   addDoc,
   updateDoc,
   deleteDoc,
-  doc
+  doc,
+  runTransaction
 } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js";
 
 
@@ -487,6 +487,29 @@ html += `🟢 ${opcao}: ${qtd}`
 div.innerHTML = html
 }
 
+async function baixarEstoqueProduto(produtoId, opcao, quantidade = 1) {
+  const produtoRef = doc(db, "Produtos", produtoId);
+
+  await runTransaction(db, async (transaction) => {
+    const snap = await transaction.get(produtoRef);
+
+    if (!snap.exists()) {
+      throw new Error("Produto não encontrado");
+    }
+
+    const dados = snap.data();
+    const estoqueAtual = dados.estoque?.[opcao] || 0;
+
+    if (estoqueAtual < quantidade) {
+      throw new Error("Estoque insuficiente");
+    }
+
+    transaction.update(produtoRef, {
+      [`estoque.${opcao}`]: estoqueAtual - quantidade
+    });
+  });
+}
+
 
 let tempoReserva = 5 * 60 * 1000 // 5 minutos
 
@@ -535,37 +558,43 @@ document.getElementById("cartBadge").innerText=qtd
 
 }
 
-window.addProduto = function(produtoId, selectId) {
+window.addProduto = async function(produtoId, selectId) {
   let produto = produtos.find(p => p.id === produtoId);
   if (!produto) return;
 
   let select = document.getElementById(selectId);
-  let opcaoTexto = select.options[select.selectedIndex].text;
+  let opcaoTexto = select.options[select.selectedIndex].text.replace(" (Esgotado)", "");
 
   if (!opcaoTexto || opcaoTexto === "Opções") {
     alert("Selecione uma opção");
     return;
   }
 
-  let nomeFinal = produto.nome + " – " + opcaoTexto;
+  try {
+    await baixarEstoqueProduto(produtoId, opcaoTexto, 1);
 
-  let item = carrinho.find(i => i.nome === nomeFinal);
+    let nomeFinal = produto.nome + " – " + opcaoTexto;
+    let item = carrinho.find(i => i.nome === nomeFinal);
 
-  if (item) {
-    item.qtd++;
-    item.tempo = Date.now();
-  } else {
-    carrinho.push({
-      produtoId: produto.id,
-      nome: nomeFinal,
-      preco: Number(produto.preco),
-      qtd: 1,
-      opcao: opcaoTexto,
-      tempo: Date.now()
-    });
+    if (item) {
+      item.qtd++;
+      item.tempo = Date.now();
+    } else {
+      carrinho.push({
+        produtoId: produto.id,
+        nome: nomeFinal,
+        preco: Number(produto.preco),
+        qtd: 1,
+        opcao: opcaoTexto,
+        tempo: Date.now()
+      });
+    }
+
+    atualizarCarrinho();
+  } catch (erro) {
+    console.error("Erro ao adicionar produto:", erro);
+    alert("Produto sem estoque disponível.");
   }
-
-  atualizarCarrinho();
 };
 
 function aumentar(i){
