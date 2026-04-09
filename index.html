@@ -322,7 +322,8 @@ import {
   updateDoc,
   deleteDoc,
   doc,
-  runTransaction
+  runTransaction,
+  serverTimestamp
 } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js";
 
 
@@ -675,14 +676,16 @@ window.limparCarrinho = async function() {
   }
 };
 
-window.gerarPedido = function () {
-  if (carrinho.length == 0) {
+window.gerarPedido = async function () {
+  if (carrinho.length === 0) {
     alert("Carrinho vazio");
     return;
   }
 
   let pagamento = document.getElementById("pagamento").value;
-  let taxa = parseFloat(document.getElementById("entrega").value || 0);
+  let entregaSelect = document.getElementById("entrega");
+  let entregaTexto = entregaSelect.options[entregaSelect.selectedIndex].text;
+  let taxa = parseFloat(entregaSelect.value || 0);
 
   let texto = "Pedido\n\n";
   let total = 0;
@@ -695,16 +698,64 @@ window.gerarPedido = function () {
 
   total += taxa;
 
-  texto += `Entrega: R$ ${taxa.toFixed(2)}\n`;
+  texto += `Entrega: ${entregaTexto}\n`;
+  texto += `Taxa: R$ ${taxa.toFixed(2)}\n`;
   texto += `Pagamento: ${pagamento}\n`;
   texto += `Total: R$ ${total.toFixed(2)}`;
 
-  document.getElementById("pedido").value = texto;
-  navigator.clipboard.writeText(texto);
+  try {
+    await salvarPedidoFirebase();
 
-  alert("Pedido copiado!");
+    document.getElementById("pedido").value = texto;
+    await navigator.clipboard.writeText(texto);
+
+    alert("Pedido salvo no Firebase e copiado!");
+
+    carrinho = [];
+    atualizarCarrinho();
+  } catch (erro) {
+    console.error("Erro ao gerar pedido:", erro);
+    alert("Erro ao salvar pedido.");
+  }
 };
 
+async function salvarPedidoFirebase() {
+  if (carrinho.length === 0) {
+    throw new Error("Carrinho vazio");
+  }
+
+  let pagamento = document.getElementById("pagamento").value;
+  let entregaSelect = document.getElementById("entrega");
+  let entregaTexto = entregaSelect.options[entregaSelect.selectedIndex].text;
+  let taxa = parseFloat(entregaSelect.value || 0);
+
+  let total = 0;
+
+  let itens = carrinho.map(item => {
+    let subtotal = item.preco * item.qtd;
+    total += subtotal;
+
+    return {
+      produtoId: item.produtoId,
+      nome: item.nome,
+      opcao: item.opcao,
+      preco: item.preco,
+      qtd: item.qtd
+    };
+  });
+
+  total += taxa;
+
+  await addDoc(collection(db, "Pedidos"), {
+    itens,
+    pagamento,
+    entrega: entregaTexto,
+    taxaEntrega: taxa,
+    total,
+    status: "novo",
+    criadoEm: serverTimestamp()
+  });
+}
 
 function atualizarSelect(selectId, stockId) {
   let select = document.getElementById(selectId);
