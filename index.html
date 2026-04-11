@@ -550,20 +550,53 @@ async function baixarEstoqueProduto(produtoId, opcao, quantidade = 1) {
 }
 
 async function devolverEstoqueProduto(produtoId, opcao, quantidade = 1) {
-  const produtoRef = doc(db, "Produtos", produtoId);
+  const ref = doc(db, "Produtos", produtoId);
 
   await runTransaction(db, async (transaction) => {
-    const snap = await transaction.get(produtoRef);
+    const snap = await transaction.get(ref);
 
     if (!snap.exists()) {
       throw new Error("Produto não encontrado");
     }
 
-    const dados = snap.data();
-    const estoqueAtual = dados.estoque?.[opcao] || 0;
+    const produto = snap.data();
+    let estoque = produto.estoque || {};
 
-    transaction.update(produtoRef, {
-      [`estoque.${opcao}`]: estoqueAtual + quantidade
+    let chaveEstoque = opcao || "unico";
+    let atual = Number(estoque[chaveEstoque] || 0);
+
+    estoque[chaveEstoque] = atual + quantidade;
+
+    transaction.update(ref, {
+      estoque
+    });
+  });
+}
+
+async function baixarEstoqueProduto(produtoId, opcao, quantidade = 1) {
+  const ref = doc(db, "Produtos", produtoId);
+
+  await runTransaction(db, async (transaction) => {
+    const snap = await transaction.get(ref);
+
+    if (!snap.exists()) {
+      throw new Error("Produto não encontrado");
+    }
+
+    const produto = snap.data();
+    let estoque = produto.estoque || {};
+
+    let chaveEstoque = opcao || "unico";
+    let atual = Number(estoque[chaveEstoque] || 0);
+
+    if (atual < quantidade) {
+      throw new Error("Sem estoque");
+    }
+
+    estoque[chaveEstoque] = atual - quantidade;
+
+    transaction.update(ref, {
+      estoque
     });
   });
 }
