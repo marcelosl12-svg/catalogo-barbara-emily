@@ -315,6 +315,7 @@ Abrir Instagram
 import {
   getFirestore,
   collection,
+  getDocs,
   onSnapshot,
   addDoc,
   updateDoc,
@@ -409,11 +410,15 @@ function gerarProdutos() {
 
   produtos.forEach((p, index) => {
     let idTela = index + 1;
+    let temOpcoes = Array.isArray(p.opcoes) && p.opcoes.length > 0;
 
-    let opcoesHTML = `<option value="">Opções</option>`;
-    p.opcoes.forEach(op => {
-      opcoesHTML += `<option value="${op}.jpg">${op}</option>`;
-    });
+    let opcoesHTML = "";
+    if (temOpcoes) {
+      opcoesHTML = `<option value="">Opções</option>`;
+      p.opcoes.forEach(op => {
+        opcoesHTML += `<option value="${op}.jpg">${op}</option>`;
+      });
+    }
 
     container.innerHTML += `
       <div class="card">
@@ -425,13 +430,19 @@ function gerarProdutos() {
 
         <div class="price">R$ ${Number(p.preco).toFixed(2)}</div>
 
-        <div class="stock" id="stock${idTela}"><b>Selecione uma opção</b></div>
+        <div class="stock" id="stock${idTela}">
+          <b>${temOpcoes ? "Selecione uma opção" : ""}</b>
+        </div>
 
-        <select id="op${idTela}" onchange="trocarImagem('op${idTela}','img${idTela}','${p.pasta}')">
-          ${opcoesHTML}
-        </select>
+        ${
+          temOpcoes
+            ? `<select id="op${idTela}" onchange="trocarImagem('op${idTela}','img${idTela}','${p.pasta}')">
+                ${opcoesHTML}
+              </select>`
+            : ``
+        }
 
-        <button class="btn" onclick="addProduto('${p.id}','op${idTela}')">
+        <button class="btn" onclick="addProduto('${p.id}', ${temOpcoes ? `'op${idTela}'` : 'null'})">
           Adicionar
         </button>
       </div>
@@ -467,20 +478,27 @@ function mostrarEstoque(stockId) {
   if (!produto) return;
 
   let estoque = produto.estoque || {};
+  let temOpcoes = Array.isArray(produto.opcoes) && produto.opcoes.length > 0;
 
-  if (select && select.selectedIndex > 0) {
-    let opcao = select.options[select.selectedIndex].text.replace(" (Esgotado)", "");
-    let qtd = estoque[opcao] || 0;
+  if (temOpcoes) {
+    if (select && select.selectedIndex > 0) {
+      let opcao = select.options[select.selectedIndex].text.replace(" (Esgotado)", "");
+      let qtd = estoque[opcao] || 0;
 
-    if (qtd <= 0) {
-      div.innerHTML = `🔴 ${opcao}: Esgotado`;
-    } else {
-      div.innerHTML = `🟢 ${opcao}: ${qtd}`;
+      div.innerHTML = qtd <= 0
+        ? `🔴 ${opcao}: Esgotado`
+        : `🟢 ${opcao}: ${qtd}`;
+      return;
     }
+
+    div.innerHTML = `<b>Selecione uma opção</b>`;
     return;
   }
 
-  div.innerHTML = `<b>Selecione uma opção</b>`;
+  let qtdUnico = estoque.unico || 0;
+  div.innerHTML = qtdUnico <= 0
+    ? `🔴 Esgotado`
+    : `🟢 Estoque: ${qtdUnico}`;
 }
 
 function mostrarEstoqueOpcao(stockId, opcao){
@@ -594,18 +612,27 @@ window.addProduto = async function(produtoId, selectId) {
   let produto = produtos.find(p => p.id === produtoId);
   if (!produto) return;
 
-  let select = document.getElementById(selectId);
-  let opcaoTexto = select.options[select.selectedIndex].text.replace(" (Esgotado)", "");
+  let temOpcoes = Array.isArray(produto.opcoes) && produto.opcoes.length > 0;
 
-  if (!opcaoTexto || opcaoTexto === "Opções") {
-    alert("Selecione uma opção");
-    return;
+  let opcaoTexto = "unico";
+
+  if (temOpcoes) {
+    let select = document.getElementById(selectId);
+    opcaoTexto = select.options[select.selectedIndex].text.replace(" (Esgotado)", "");
+
+    if (!opcaoTexto || opcaoTexto === "Opções") {
+      alert("Selecione uma opção");
+      return;
+    }
   }
 
   try {
     await baixarEstoqueProduto(produtoId, opcaoTexto, 1);
 
-    let nomeFinal = produto.nome + " – " + opcaoTexto;
+    let nomeFinal = temOpcoes
+      ? `${produto.nome} – ${opcaoTexto}`
+      : produto.nome;
+
     let item = carrinho.find(i => i.nome === nomeFinal);
 
     if (item) {
@@ -705,6 +732,16 @@ window.gerarPedido = async function () {
   let entregaSelect = document.getElementById("entrega");
   let entregaTexto = entregaSelect.options[entregaSelect.selectedIndex].text;
   let taxa = parseFloat(entregaSelect.value || 0);
+
+  if (!pagamento) {
+    alert("Selecione a forma de pagamento.");
+    return;
+  }
+
+  if (!entregaTexto || entregaTexto === "Opções de entrega") {
+    alert("Selecione a opção de entrega.");
+    return;
+  }
 
   let texto = "Pedido\n\n";
   let total = 0;
@@ -846,7 +883,6 @@ function atualizarSelect(selectId, stockId) {
 
   for (let i = 0; i < select.options.length; i++) {
     let op = select.options[i].text.replace(" (Esgotado)", "");
-
     if (op === "Opções") continue;
 
     if ((estoque[op] || 0) <= 0) {
@@ -890,6 +926,7 @@ estoques = JSON.parse(dados)
 }
 }
 
+
 // ===== ADMIN OCULTO =====
 
 document.addEventListener("keydown", function(e) {
@@ -902,95 +939,459 @@ document.addEventListener("keydown", function(e) {
   }
 });
 
-window.abrirAdmin = function() {
+window.abrirAdmin = function () {
+  let painel = document.createElement("div");
 
-let painel = document.createElement("div")
+  painel.style.position = "fixed";
+  painel.style.top = "50%";
+  painel.style.left = "50%";
+  painel.style.transform = "translate(-50%,-50%)";
+  painel.style.background = "#fff";
+  painel.style.borderRadius = "14px";
+  painel.style.boxShadow = "0 0 25px rgba(0,0,0,0.35)";
+  painel.style.zIndex = "9999";
+  painel.style.width = "min(95vw, 1200px)";
+  painel.style.height = "90vh";
+  painel.style.display = "flex";
+  painel.style.flexDirection = "column";
+  painel.style.overflow = "hidden";
 
-painel.style.position = "fixed"
-painel.style.top = "50%"
-painel.style.left = "50%"
-painel.style.transform = "translate(-50%,-50%)"
-painel.style.background = "#fff"
-painel.style.padding = "20px"
-painel.style.borderRadius = "10px"
-painel.style.boxShadow = "0 0 20px rgba(0,0,0,0.3)"
-painel.style.zIndex = "9999"
-painel.style.width = "320px"
-painel.style.maxHeight = "90%"
-painel.style.overflowY = "auto"
+  painel.innerHTML = `
+    <div style="
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      padding:14px 18px;
+      border-bottom:1px solid #ddd;
+      background:#fff;
+      flex-shrink:0;
+    ">
+      <div>
+        <h2 style="margin:0; font-size:22px;">Painel Admin</h2>
+      </div>
 
-let html = "<h3>ADMIN</h3>"
+      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <button onclick="logoutAdmin()">Sair</button>
+        <button onclick="fecharAdmin()">Fechar</button>
+      </div>
+    </div>
 
-// ===== ESTOQUE =====
-for(let stockId in estoques){
+    <div style="
+      display:flex;
+      gap:8px;
+      padding:12px 18px;
+      border-bottom:1px solid #ddd;
+      background:#fafafa;
+      flex-shrink:0;
+      flex-wrap:wrap;
+    ">
+      <button onclick="mostrarSecaoAdmin('dashboard')">Dashboard</button>
+      <button onclick="mostrarSecaoAdmin('produtos')">Produtos</button>
+      <button onclick="mostrarSecaoAdmin('pedidos')">Pedidos</button>
+    </div>
 
-html += "<b>"+stockId+"</b><br>"
+    <div id="adminConteudoPrincipal" style="
+      flex:1;
+      overflow-y:auto;
+      padding:18px;
+      background:#fff;
+    "></div>
+  `;
 
-for(let op in estoques[stockId]){
+  document.body.appendChild(painel);
+  window.painelAdmin = painel;
 
-html += `
-${op}: <input type="number" value="${estoques[stockId][op]}" id="adm_${stockId}_${op}" style="width:60px"><br>
-`
+  window.mostrarSecaoAdmin("dashboard");
+};
 
-}
+window.mostrarSecaoAdmin = function (secao) {
+  let container = document.getElementById("adminConteudoPrincipal");
+  if (!container) return;
 
-html += "<br>"
-}
+  if (secao === "dashboard") {
+    window.renderDashboardAdmin();
+    return;
+  }
 
-html += `<hr><h4>Produtos</h4>`
+  if (secao === "produtos") {
+    window.renderSecaoProdutosAdmin();
+    return;
+  }
 
-produtos.forEach((p, index)=>{
+  if (secao === "pedidos") {
+    window.renderSecaoPedidosAdmin();
+    return;
+  }
+};
 
-html += `
-<div style="border:1px solid #ccc;padding:5px;margin-bottom:8px">
+window.filtrarProdutosAdmin = function () {
+  let busca = document.getElementById("buscaProdutoAdmin")?.value.toLowerCase() || "";
+  let cards = document.querySelectorAll(".cardProdutoAdmin");
 
-<b>Produto ${index+1}</b><br>
+  cards.forEach(card => {
+    let nome = card.getAttribute("data-nome") || "";
 
-Nome: <input id="p_nome_${index}" value="${p.nome}"><br>
-Marca: <input id="p_marca_${index}" value="${p.marca}"><br>
-Preço: <input type="number" id="p_preco_${index}" value="${p.preco}"><br>
-Pasta: <input id="p_pasta_${index}" value="${p.pasta}"><br>
-Imagem: <input id="p_imagem_${index}" value="${p.imagem}"><br>
-Opções: <input id="p_opcoes_${index}" value="${p.opcoes.join(",")}"><br>
+    if (nome.includes(busca)) {
+      card.style.display = "block";
+    } else {
+      card.style.display = "none";
+    }
+  });
+};
 
-<button onclick="removerProduto(${index})" style="background:red;color:white;border:none;padding:5px;border-radius:5px;margin-top:5px;">
-Excluir Produto
-</button>
+window.renderDashboardAdmin = function () {
+  let container = document.getElementById("adminConteudoPrincipal");
+  if (!container) return;
 
+  container.innerHTML = `
+    <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:16px;">
+      <button onclick="dashboardVendas('hoje')">Hoje</button>
+      <button onclick="dashboardVendas('7dias')">7 dias</button>
+      <button onclick="dashboardVendas('30dias')">30 dias</button>
+      <button onclick="dashboardVendas('total')">Total</button>
+      <button onclick="exportarRelatorioCSV()">📤 Exportar CSV</button>
+    </div>
+
+    <div id="dashboardVendas">Carregando dashboard...</div>
+  `;
+
+  window.dashboardVendas("total");
+};
+
+window.dashboardVendas = function () {
+  const pedidosRef = collection(db, "Pedidos");
+
+  onSnapshot(pedidosRef, (snapshot) => {
+    let totalPedidos = 0;
+    let faturamento = 0;
+    let produtosVendidos = {};
+
+    snapshot.forEach(docSnap => {
+      let pedido = docSnap.data();
+
+      totalPedidos++;
+      faturamento += Number(pedido.total || 0);
+
+      let itensPedido = Array.isArray(pedido.itens) ? pedido.itens : [];
+
+      itensPedido.forEach(item => {
+        let nome = item.nome || "Produto sem nome";
+        let qtd = Number(item.qtd || 0);
+
+        produtosVendidos[nome] = (produtosVendidos[nome] || 0) + qtd;
+      });
+    });
+
+    let ranking = Object.entries(produtosVendidos)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5);
+
+    let rankingHTML = ranking.length
+      ? ranking.map((item, index) => `
+          <p style="margin:6px 0;">
+            ${index + 1}º 🏆 ${item[0]} — ${item[1]} vendas
+          </p>
+        `).join("")
+      : "<p>Nenhuma venda ainda</p>";
+
+    let box = document.getElementById("dashboardVendas");
+    if (!box) return;
+
+    let graficoHTML = Object.entries(produtosVendidos)
+  .sort((a, b) => b[1] - a[1])
+  .slice(0, 5)
+  .map(item => {
+    let largura = item[1] * 20;
+
+    return `
+      <div style="margin:10px 0;">
+        <div style="font-size:14px; margin-bottom:4px;">
+          ${item[0]} (${item[1]})
+        </div>
+        <div style="
+          height:22px;
+          width:${largura}px;
+          background:linear-gradient(90deg,#7c3aed,#c084fc);
+          border-radius:6px;
+        "></div>
+      </div>
+    `;
+  }).join("");
+
+box.innerHTML = `
+  <h2>📊 Dashboard</h2>
+  <p>📦 Pedidos: ${totalPedidos}</p>
+  <p>💰 Faturamento: R$ ${faturamento.toFixed(2)}</p>
+
+  <h3 style="margin-top:20px;">🏆 Top 5 Produtos</h3>
+  ${rankingHTML}
+
+  <h3 style="margin-top:24px;">📈 Gráfico de vendas</h3>
+  ${graficoHTML || "<p>Sem dados</p>"}
+`;
+  }, (erro) => {
+    console.error("Erro no dashboard:", erro);
+
+    let box = document.getElementById("dashboardVendas");
+    if (box) {
+      box.innerHTML = `<p>Erro ao carregar dashboard.</p>`;
+    }
+  });
+};
+
+window.exportarRelatorioCSV = async function () {
+  try {
+    const snapshot = await getDocs(collection(db, "Pedidos"));
+
+    let linhas = [
+      ["Data", "Pagamento", "Entrega", "Total", "Itens"]
+    ];
+
+    snapshot.forEach(docSnap => {
+      let pedido = docSnap.data();
+
+      let data = pedido.criadoEm?.toDate
+        ? pedido.criadoEm.toDate().toLocaleString("pt-BR")
+        : "";
+
+      let itens = Array.isArray(pedido.itens)
+        ? pedido.itens.map(i => `${i.nome} (${i.qtd})`).join(" | ")
+        : "";
+
+      linhas.push([
+        data,
+        pedido.pagamento || "",
+        pedido.entrega || "",
+        pedido.total || 0,
+        itens
+      ]);
+    });
+
+    let csv = linhas.map(l =>
+      l.map(v => `"${String(v).replace(/"/g, '""')}"`).join(";")
+    ).join("\n");
+
+    // ✅ BOM para Excel reconhecer UTF-8 corretamente
+    let csvComBOM = "\uFEFF" + csv;
+
+    let blob = new Blob([csvComBOM], { type: "text/csv;charset=utf-8;" });
+    let url = URL.createObjectURL(blob);
+
+    let link = document.createElement("a");
+    link.href = url;
+    link.download = "relatorio_vendas.csv";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    URL.revokeObjectURL(url);
+  } catch (erro) {
+    console.error("Erro ao exportar CSV:", erro);
+    alert("Erro ao exportar relatório.");
+  }
+};
+
+window.renderSecaoProdutosAdmin = function () {
+  let container = document.getElementById("adminConteudoPrincipal");
+  if (!container) return;
+
+  let html = `
+    <h2 style="margin-top:0;">Produtos</h2>
+
+    <div style="margin-bottom:16px;">
+  <input
+    id="buscaProdutoAdmin"
+    placeholder="🔍 Buscar produto..."
+    style="width:100%; padding:10px; border:1px solid #ccc; border-radius:8px;"
+    oninput="filtrarProdutosAdmin()"
+  >
 </div>
-`
-})
+    
+    <div style="
+      border:1px solid #ddd;
+      border-radius:12px;
+      padding:14px;
+      margin-bottom:18px;
+      background:#fafafa;
+    ">
+      <h3 style="margin-top:0;">Novo Produto</h3>
 
-// ===== NOVO PRODUTO =====
-html += `
-<hr>
-<h4>Novo Produto</h4>
+      <div style="
+        display:grid;
+        grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));
+        gap:10px;
+      ">
+        <input id="novo_nome" placeholder="Nome">
+        <input id="novo_marca" placeholder="Marca">
+        <input id="novo_preco" type="number" placeholder="Preço">
+        <input id="novo_pasta" placeholder="Nome da pasta da imagem">
+        <input id="novo_opcoes" placeholder="Opções (ex: Azul,Verde,Rosa)">
+        <input id="novo_imagem" placeholder="Imagem principal (ex: 1.jpg)">
+      </div>
 
-<input id="novo_nome" placeholder="Nome"><br><br>
-<input id="novo_marca" placeholder="Marca"><br><br>
-<input id="novo_preco" type="number" placeholder="Preço"><br><br>
-<input id="novo_pasta" placeholder="Nome da pasta da imagem"><br><br>
-<input id="novo_opcoes" placeholder="Opções (ex: Azul,Verde,Rosa)"><br><br>
-<input id="novo_imagem" placeholder="Imagem principal (ex: 1.jpg)">
-`
+      <div style="margin-top:12px;">
+        <button onclick="criarProduto()">Criar Produto</button>
+      </div>
+    </div>
 
-html += `
-<button onclick="salvarAdmin()">Salvar Estoque</button>
-<button onclick="salvarEdicaoProdutos()">Salvar Produtos</button>
-<button onclick="criarProduto()">Criar Produto</button>
-<button onclick="logoutAdmin()">Sair</button>
-<button onclick="fecharAdmin()">Fechar</button>
-`
+    <div style="
+      display:grid;
+      grid-template-columns:repeat(auto-fit, minmax(320px, 1fr));
+      gap:14px;
+    ">
+  `;
 
-painel.innerHTML = html
+  produtos.forEach((p, index) => {
+  let estoqueHTML = "";
+  let temOpcoes = Array.isArray(p.opcoes) && p.opcoes.length > 0;
+  let estoque = p.estoque || {};
 
-document.body.appendChild(painel)
+  if (temOpcoes) {
+    estoqueHTML += `<div style="margin-top:10px;"><b>Estoque por opção</b><br>`;
+    p.opcoes.forEach(op => {
+      estoqueHTML += `
+        <label style="display:block; margin-top:6px;">
+          ${op}:<br>
+          <input type="number" id="p_estoque_${index}_${op}" value="${estoque[op] ?? 0}" style="width:100%;">
+        </label>
+      `;
+    });
+    estoqueHTML += `</div>`;
+  } else {
+    estoqueHTML = `
+      <div style="margin-top:10px;">
+        <b>Estoque único</b><br>
+        <input type="number" id="p_estoque_${index}_unico" value="${estoque.unico ?? 0}" style="width:100%; margin-top:6px;">
+      </div>
+    `;
+  }
 
-window.painelAdmin = painel
+  html += `
+    <div
+    class="cardProdutoAdmin"
+    data-nome="${p.nome.toLowerCase()}"
+    style="
+      border:1px solid #ccc;
+      border-radius:12px;
+      padding:12px;
+      background:#fff;
+      box-shadow:0 2px 8px rgba(0,0,0,0.06);
+    ">
+      <b style="font-size:18px;">Produto ${index + 1}</b><br><br>
 
-window.abrirPedidosAdmin();
+      Nome:<br>
+      <input id="p_nome_${index}" value="${p.nome}" style="width:100%; margin-bottom:8px;"><br>
 
-}
+      Marca:<br>
+      <input id="p_marca_${index}" value="${p.marca}" style="width:100%; margin-bottom:8px;"><br>
+
+      Preço:<br>
+      <input type="number" id="p_preco_${index}" value="${p.preco}" style="width:100%; margin-bottom:8px;"><br>
+
+      Pasta:<br>
+      <input id="p_pasta_${index}" value="${p.pasta}" style="width:100%; margin-bottom:8px;"><br>
+
+      Imagem:<br>
+      <input id="p_imagem_${index}" value="${p.imagem}" style="width:100%; margin-bottom:8px;"><br>
+
+      Opções:<br>
+      <input id="p_opcoes_${index}" value="${p.opcoes.join(",")}" style="width:100%; margin-bottom:8px;"><br>
+
+      ${estoqueHTML}
+
+      <div style="margin-top:12px;">
+        <button onclick="removerProduto(${index})" style="
+          background:red;
+          color:white;
+          border:none;
+          padding:8px 10px;
+          border-radius:6px;
+          cursor:pointer;
+        ">
+          Excluir Produto
+        </button>
+      </div>
+    </div>
+  `;
+});
+
+  html += `
+    </div>
+
+    <div style="
+      position:sticky;
+      bottom:-18px;
+      background:#fff;
+      padding-top:14px;
+      margin-top:18px;
+      border-top:1px solid #ddd;
+    ">
+      <button onclick="salvarEdicaoProdutos()">Salvar Produtos</button>
+    </div>
+  `;
+
+  container.innerHTML = html;
+};
+
+window.renderSecaoPedidosAdmin = function () {
+  let container = document.getElementById("adminConteudoPrincipal");
+  if (!container) return;
+
+  container.innerHTML = `
+    <h2 style="margin-top:0;">Pedidos</h2>
+    <div id="listaPedidosAdmin">Carregando...</div>
+  `;
+
+  const pedidosRef = query(
+    collection(db, "Pedidos"),
+    orderBy("criadoEm", "desc")
+  );
+
+  onSnapshot(pedidosRef, (snapshot) => {
+    let lista = document.getElementById("listaPedidosAdmin");
+    if (!lista) return;
+
+    let pedidosHTML = `
+      <div style="
+        display:grid;
+        grid-template-columns:repeat(auto-fit, minmax(320px, 1fr));
+        gap:14px;
+      ">
+    `;
+
+    snapshot.forEach((docSnap) => {
+      let p = docSnap.data();
+
+      let itens = p.itens.map(i =>
+        `${i.nome} (${i.qtd}x)`
+      ).join("<br>");
+
+      pedidosHTML += `
+        <div style="
+          border:1px solid #ccc;
+          border-radius:12px;
+          padding:12px;
+          background:#fff;
+          box-shadow:0 2px 8px rgba(0,0,0,0.06);
+        ">
+          <b>Status:</b> ${p.status}<br>
+          <b>Pagamento:</b> ${p.pagamento}<br>
+          <b>Entrega:</b> ${p.entrega}<br>
+          <b>Total:</b> R$ ${p.total.toFixed(2)}<br><br>
+          <b>Itens:</b><br>${itens}<br><br>
+
+          <button onclick="concluirPedido('${docSnap.id}')">
+            ✅ Concluir
+          </button>
+        </div>
+      `;
+    });
+
+    pedidosHTML += `</div>`;
+
+    lista.innerHTML = snapshot.empty ? "Nenhum pedido" : pedidosHTML;
+  });
+};
 
 window.loginAdmin = async function () {
   let email = prompt("Email admin:");
@@ -1022,18 +1423,19 @@ window.logoutAdmin = async function () {
 };
 
 window.criarProduto = async function () {
-  let nome = document.getElementById("novo_nome").value;
-  let marca = document.getElementById("novo_marca").value;
+  let nome = document.getElementById("novo_nome").value.trim();
+  let marca = document.getElementById("novo_marca").value.trim();
   let preco = parseFloat(document.getElementById("novo_preco").value);
-  let pasta = document.getElementById("novo_pasta").value;
-  let opcoes = document.getElementById("novo_opcoes").value
-    .split(",")
-    .map(o => o.trim())
-    .filter(o => o);
-  let imagem = document.getElementById("novo_imagem").value;
+  let pasta = document.getElementById("novo_pasta").value.trim();
+  let imagem = document.getElementById("novo_imagem").value.trim();
 
-  if (!nome || !marca || isNaN(preco) || !pasta || !imagem || opcoes.length === 0) {
-    alert("Preencha tudo");
+  let opcoesTexto = document.getElementById("novo_opcoes").value.trim();
+  let opcoes = opcoesTexto
+    ? opcoesTexto.split(",").map(o => o.trim()).filter(o => o)
+    : [];
+
+  if (!nome || !marca || isNaN(preco) || !pasta || !imagem) {
+    alert("Preencha os campos obrigatórios.");
     return;
   }
 
@@ -1046,10 +1448,22 @@ window.criarProduto = async function () {
     opcoes
   };
 
+  // Se tiver opções, cria estoque por opção
+  // Se não tiver, cria estoque único
+  if (opcoes.length > 0) {
+    novo.estoque = {};
+    opcoes.forEach(op => {
+      novo.estoque[op] = 0;
+    });
+  } else {
+    novo.estoque = {
+      unico: 0
+    };
+  }
+
   try {
     await addDoc(collection(db, "Produtos"), novo);
     alert("Produto criado no Firebase!");
-    await carregarProdutosFirebase();
     window.fecharAdmin();
   } catch (erro) {
     console.error("Erro ao criar produto:", erro);
@@ -1062,15 +1476,30 @@ window.salvarEdicaoProdutos = async function () {
     for (let index = 0; index < produtos.length; index++) {
       let p = produtos[index];
 
-      let nome = document.getElementById(`p_nome_${index}`).value;
-      let marca = document.getElementById(`p_marca_${index}`).value;
-      let preco = parseFloat(document.getElementById(`p_preco_${index}`).value);
-      let pasta = document.getElementById(`p_pasta_${index}`).value;
-      let imagem = document.getElementById(`p_imagem_${index}`).value || "1.jpg";
-      let opcoes = document.getElementById(`p_opcoes_${index}`).value
-        .split(",")
-        .map(o => o.trim())
-        .filter(o => o);
+      let nome = document.getElementById(`p_nome_${index}`)?.value.trim() || "";
+      let marca = document.getElementById(`p_marca_${index}`)?.value.trim() || "";
+      let preco = parseFloat(document.getElementById(`p_preco_${index}`)?.value || 0);
+      let pasta = document.getElementById(`p_pasta_${index}`)?.value.trim() || "";
+      let imagem = document.getElementById(`p_imagem_${index}`)?.value.trim() || "";
+      let opcoesTexto = document.getElementById(`p_opcoes_${index}`)?.value.trim() || "";
+
+      let novasOpcoes = opcoesTexto
+        ? opcoesTexto.split(",").map(o => o.trim()).filter(o => o)
+        : [];
+
+      let novoEstoque = {};
+
+      if (novasOpcoes.length > 0) {
+        novasOpcoes.forEach(op => {
+          let campo = document.getElementById(`p_estoque_${index}_${op}`);
+          novoEstoque[op] = campo ? parseInt(campo.value || 0) : 0;
+        });
+      } else {
+        let campoUnico = document.getElementById(`p_estoque_${index}_unico`);
+        novoEstoque = {
+          unico: campoUnico ? parseInt(campoUnico.value || 0) : 0
+        };
+      }
 
       await updateDoc(doc(db, "Produtos", p.id), {
         nome,
@@ -1078,16 +1507,15 @@ window.salvarEdicaoProdutos = async function () {
         preco,
         pasta,
         imagem,
-        opcoes
+        opcoes: novasOpcoes,
+        estoque: novoEstoque
       });
     }
 
-    alert("Produtos atualizados no Firebase!");
-    await carregarProdutosFirebase();
-    window.fecharAdmin();
+    alert("Produtos e estoques atualizados com sucesso!");
   } catch (erro) {
-    console.error("Erro ao salvar edição:", erro);
-    alert("Erro ao atualizar produtos no Firebase.");
+    console.error("Erro ao salvar produtos:", erro);
+    alert("Erro ao salvar edição dos produtos.");
   }
 };
 
