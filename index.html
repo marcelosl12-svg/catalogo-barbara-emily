@@ -416,7 +416,7 @@ function gerarProdutos() {
     if (temOpcoes) {
       opcoesHTML = `<option value="">Opções</option>`;
       p.opcoes.forEach(op => {
-        opcoesHTML += `<option value="${op}.jpg">${op}</option>`;
+        opcoesHTML += `<option value="${op}" data-img="${op}.jpg">${op}</option>`;
       });
     }
 
@@ -454,10 +454,17 @@ window.trocarImagem = function (selectId, imgId, pasta) {
   let select = document.getElementById(selectId);
   let img = document.getElementById(imgId);
 
-  let novaImagem = select.value;
+  if (!select) return;
 
-  if (novaImagem) {
-    img.src = "imagens/" + pasta + "/" + novaImagem;
+  let optionSelecionada = select.options[select.selectedIndex];
+  if (!optionSelecionada || !optionSelecionada.value) {
+    return;
+  }
+
+  let nomeImagem = optionSelecionada.getAttribute("data-img");
+
+  if (nomeImagem) {
+    img.src = "imagens/" + pasta + "/" + nomeImagem;
     img.onerror = function () {
       this.onerror = null;
       this.src = "imagens/sem-imagem.jpg";
@@ -481,9 +488,9 @@ function mostrarEstoque(stockId) {
   let temOpcoes = Array.isArray(produto.opcoes) && produto.opcoes.length > 0;
 
   if (temOpcoes) {
-    if (select && select.selectedIndex > 0) {
-      let opcao = select.options[select.selectedIndex].text.replace(" (Esgotado)", "");
-      let qtd = estoque[opcao] || 0;
+    if (select && select.value) {
+      let opcao = select.value;
+      let qtd = Number(estoque[opcao] || 0);
 
       div.innerHTML = qtd <= 0
         ? `🔴 ${opcao}: Esgotado`
@@ -495,7 +502,7 @@ function mostrarEstoque(stockId) {
     return;
   }
 
-  let qtdUnico = estoque.unico || 0;
+  let qtdUnico = Number(estoque.unico || 0);
   div.innerHTML = qtdUnico <= 0
     ? `🔴 Esgotado`
     : `🟢 Estoque: ${qtdUnico}`;
@@ -613,17 +620,16 @@ window.addProduto = async function(produtoId, selectId) {
   if (!produto) return;
 
   let temOpcoes = Array.isArray(produto.opcoes) && produto.opcoes.length > 0;
-
   let opcaoTexto = "unico";
 
   if (temOpcoes) {
     let select = document.getElementById(selectId);
-    opcaoTexto = select.options[select.selectedIndex].text.replace(" (Esgotado)", "");
-
-    if (!opcaoTexto || opcaoTexto === "Opções") {
+    if (!select || !select.value) {
       alert("Selecione uma opção");
       return;
     }
+
+    opcaoTexto = select.value;
   }
 
   try {
@@ -882,15 +888,20 @@ function atualizarSelect(selectId, stockId) {
   let estoque = produto.estoque || {};
 
   for (let i = 0; i < select.options.length; i++) {
-    let op = select.options[i].text.replace(" (Esgotado)", "");
-    if (op === "Opções") continue;
+    let option = select.options[i];
+    let op = option.value;
 
-    if ((estoque[op] || 0) <= 0) {
-      select.options[i].disabled = true;
-      select.options[i].text = op + " (Esgotado)";
+    if (!op) continue;
+
+    let textoOriginal = op;
+    let qtd = Number(estoque[op] || 0);
+
+    if (qtd <= 0) {
+      option.disabled = true;
+      option.text = textoOriginal + " (Esgotado)";
     } else {
-      select.options[i].disabled = false;
-      select.options[i].text = op;
+      option.disabled = false;
+      option.text = textoOriginal;
     }
   }
 }
