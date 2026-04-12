@@ -241,7 +241,7 @@ font-weight:bold;
 
 <header>
  <div class="logoArea">
-<img src="imagens/00/perfil.jpg" class="logo">
+<img src="imagens/00/Logo.jpg" class="logo">
 <b class="titulo">Catálogo Bárbara Emily</b>
 </div>
 
@@ -391,6 +391,8 @@ function carregarProdutosFirebase() {
       ...docSnap.data()
     }));
 
+    produtos.sort((a, b) => (a.ordem ?? 999) - (b.ordem ?? 999));
+
     gerarProdutos();
 
     produtos.forEach((p, index) => {
@@ -400,7 +402,7 @@ function carregarProdutosFirebase() {
     });
   }, (erro) => {
     console.error("Erro ao ouvir produtos do Firebase:", erro);
-    alert("Erro ao atualizar produtos em tempo real.");
+    alert("Erro ao carregar produtos.");
   });
 }
 
@@ -1311,6 +1313,9 @@ window.renderSecaoProdutosAdmin = function () {
       Preço:<br>
       <input type="number" id="p_preco_${index}" value="${p.preco}" style="width:100%; margin-bottom:8px;"><br>
 
+      Ordem:<br>
+      <input type="number" id="p_ordem_${index}" value="${p.ordem ?? 999}" style="width:100%; margin-bottom:8px;"><br>
+      
       Pasta:<br>
       <input id="p_pasta_${index}" value="${p.pasta}" style="width:100%; margin-bottom:8px;"><br>
 
@@ -1466,6 +1471,7 @@ window.criarProduto = async function () {
     nome,
     marca,
     preco,
+    ordem: 999,
     pasta,
     imagem,
     opcoes
@@ -1502,6 +1508,7 @@ window.salvarEdicaoProdutos = async function () {
       let nome = document.getElementById(`p_nome_${index}`)?.value.trim() || "";
       let marca = document.getElementById(`p_marca_${index}`)?.value.trim() || "";
       let preco = parseFloat(document.getElementById(`p_preco_${index}`)?.value || 0);
+      let ordem = parseInt(document.getElementById(`p_ordem_${index}`)?.value || 999);
       let pasta = document.getElementById(`p_pasta_${index}`)?.value.trim() || "";
       let imagem = document.getElementById(`p_imagem_${index}`)?.value.trim() || "";
       let opcoesTexto = document.getElementById(`p_opcoes_${index}`)?.value.trim() || "";
@@ -1525,14 +1532,15 @@ window.salvarEdicaoProdutos = async function () {
       }
 
       await updateDoc(doc(db, "Produtos", p.id), {
-        nome,
-        marca,
-        preco,
-        pasta,
-        imagem,
-        opcoes: novasOpcoes,
-        estoque: novoEstoque
-      });
+      nome,
+      marca,
+      preco,
+      ordem,
+      pasta,
+      imagem,
+      opcoes: novasOpcoes,
+      estoque: novoEstoque
+    });
     }
 
     alert("Produtos e estoques atualizados com sucesso!");
