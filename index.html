@@ -526,28 +526,6 @@ html += `🟢 ${opcao}: ${qtd}`
 div.innerHTML = html
 }
 
-async function baixarEstoqueProduto(produtoId, opcao, quantidade = 1) {
-  const produtoRef = doc(db, "Produtos", produtoId);
-
-  await runTransaction(db, async (transaction) => {
-    const snap = await transaction.get(produtoRef);
-
-    if (!snap.exists()) {
-      throw new Error("Produto não encontrado");
-    }
-
-    const dados = snap.data();
-    const estoqueAtual = dados.estoque?.[opcao] || 0;
-
-    if (estoqueAtual < quantidade) {
-      throw new Error("Estoque insuficiente");
-    }
-
-    transaction.update(produtoRef, {
-      [`estoque.${opcao}`]: estoqueAtual - quantidade
-    });
-  });
-}
 
 async function devolverEstoqueProduto(produtoId, opcao, quantidade = 1) {
   const ref = doc(db, "Produtos", produtoId);
@@ -572,6 +550,14 @@ async function devolverEstoqueProduto(produtoId, opcao, quantidade = 1) {
     });
   });
 }
+
+
+let tempoReserva = 5 * 60 * 1000 // 5 minutos
+
+window.toggleCarrinho = function () {
+  let c = document.getElementById("cartPanel");
+  c.style.display = c.style.display === "block" ? "none" : "block";
+};
 
 async function baixarEstoqueProduto(produtoId, opcao, quantidade = 1) {
   const ref = doc(db, "Produtos", produtoId);
@@ -600,13 +586,6 @@ async function baixarEstoqueProduto(produtoId, opcao, quantidade = 1) {
     });
   });
 }
-
-let tempoReserva = 5 * 60 * 1000 // 5 minutos
-
-window.toggleCarrinho = function () {
-  let c = document.getElementById("cartPanel");
-  c.style.display = c.style.display === "block" ? "none" : "block";
-};
 
 function atualizarCarrinho(){
 
