@@ -494,7 +494,7 @@ function mostrarEstoque(stockId) {
 
       div.innerHTML = qtd <= 0
         ? `🔴 ${opcao}: Esgotado`
-        : `🟢 ${opcao}: ${qtd}`;
+        : `🟢 ${opcao}: Disponível`;
       return;
     }
 
@@ -505,7 +505,7 @@ function mostrarEstoque(stockId) {
   let qtdUnico = Number(estoque.unico || 0);
   div.innerHTML = qtdUnico <= 0
     ? `🔴 Esgotado`
-    : `🟢 Estoque: ${qtdUnico}`;
+    : `🟢 Disponível`;
 }
 
 function mostrarEstoqueOpcao(stockId, opcao){
