@@ -840,16 +840,16 @@ window.abrirPedidosAdmin = function () {
   });
 };
 
-window.concluirPedido = async function (pedidoId) {
+window.atualizarStatusPedido = async function (pedidoId, novoStatus) {
   try {
     await updateDoc(doc(db, "Pedidos", pedidoId), {
-      status: "concluido"
+      status: novoStatus
     });
 
-    alert("Pedido concluído!");
+    alert(`Pedido atualizado para: ${novoStatus}`);
   } catch (erro) {
-    console.error("Erro ao concluir pedido:", erro);
-    alert("Erro ao atualizar pedido.");
+    console.error("Erro ao atualizar status do pedido:", erro);
+    alert("Erro ao atualizar status.");
   }
 };
 
@@ -1367,9 +1367,23 @@ window.renderSecaoPedidosAdmin = function () {
 
   container.innerHTML = `
     <h2 style="margin-top:0;">Pedidos</h2>
+
+    <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:16px;">
+      <button onclick="filtrarPedidosAdmin('todos')">Todos</button>
+      <button onclick="filtrarPedidosAdmin('novo')">Novos</button>
+      <button onclick="filtrarPedidosAdmin('separando')">Separando</button>
+      <button onclick="filtrarPedidosAdmin('pronto')">Prontos</button>
+      <button onclick="filtrarPedidosAdmin('entregue')">Entregues</button>
+      <button onclick="filtrarPedidosAdmin('cancelado')">Cancelados</button>
+    </div>
+
     <div id="listaPedidosAdmin">Carregando...</div>
   `;
 
+  window.filtrarPedidosAdmin("todos");
+};
+
+window.filtrarPedidosAdmin = function (statusFiltro = "todos") {
   const pedidosRef = query(
     collection(db, "Pedidos"),
     orderBy("criadoEm", "desc")
@@ -1387,12 +1401,53 @@ window.renderSecaoPedidosAdmin = function () {
       ">
     `;
 
+    let encontrou = false;
+
     snapshot.forEach((docSnap) => {
       let p = docSnap.data();
+      let status = (p.status || "novo").toLowerCase();
 
-      let itens = p.itens.map(i =>
-        `${i.nome} (${i.qtd}x)`
-      ).join("<br>");
+      if (statusFiltro !== "todos" && status !== statusFiltro) {
+        return;
+      }
+
+      encontrou = true;
+
+      let itens = Array.isArray(p.itens)
+        ? p.itens.map(i => `${i.nome} (${i.qtd}x)`).join("<br>")
+        : "Sem itens";
+
+      let dataPedido = p.criadoEm?.toDate
+        ? p.criadoEm.toDate().toLocaleString("pt-BR")
+        : "";
+
+      let corStatus = "#666";
+      let fundoStatus = "#f3f3f3";
+
+      if (status === "novo") {
+        corStatus = "#8a6d00";
+        fundoStatus = "#fff7d6";
+      } else if (status === "separando") {
+        corStatus = "#9a4d00";
+        fundoStatus = "#ffe8cc";
+      } else if (status === "pronto") {
+        corStatus = "#0b5394";
+        fundoStatus = "#d9ecff";
+      } else if (status === "entregue") {
+        corStatus = "#0f6b2f";
+        fundoStatus = "#dff7e5";
+      } else if (status === "cancelado") {
+        corStatus = "#a61b1b";
+        fundoStatus = "#ffe0e0";
+      }
+
+      const botaoStyle = `
+        border:none;
+        padding:6px 10px;
+        border-radius:6px;
+        cursor:pointer;
+        background:#f3f3f3;
+      `;
 
       pedidosHTML += `
         <div style="
@@ -1402,22 +1457,40 @@ window.renderSecaoPedidosAdmin = function () {
           background:#fff;
           box-shadow:0 2px 8px rgba(0,0,0,0.06);
         ">
-          <b>Status:</b> ${p.status}<br>
-          <b>Pagamento:</b> ${p.pagamento}<br>
-          <b>Entrega:</b> ${p.entrega}<br>
-          <b>Total:</b> R$ ${p.total.toFixed(2)}<br><br>
+          <div style="
+            display:inline-block;
+            padding:4px 10px;
+            border-radius:999px;
+            background:${fundoStatus};
+            color:${corStatus};
+            font-weight:bold;
+            margin-bottom:10px;
+            text-transform:capitalize;
+          ">
+            ${status}
+          </div><br>
+
+          <b>Data:</b> ${dataPedido}<br>
+          <b>Pagamento:</b> ${p.pagamento || "-"}<br>
+          <b>Entrega:</b> ${p.entrega || "-"}<br>
+          <b>Total:</b> R$ ${Number(p.total || 0).toFixed(2)}<br><br>
+
           <b>Itens:</b><br>${itens}<br><br>
 
-          <button onclick="concluirPedido('${docSnap.id}')">
-            ✅ Concluir
-          </button>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button style="${botaoStyle}" onclick="atualizarStatusPedido('${docSnap.id}','novo')">🟡 Novo</button>
+            <button style="${botaoStyle}" onclick="atualizarStatusPedido('${docSnap.id}','separando')">🟠 Separando</button>
+            <button style="${botaoStyle}" onclick="atualizarStatusPedido('${docSnap.id}','pronto')">🔵 Pronto</button>
+            <button style="${botaoStyle}" onclick="atualizarStatusPedido('${docSnap.id}','entregue')">🟢 Entregue</button>
+            <button style="${botaoStyle}" onclick="atualizarStatusPedido('${docSnap.id}','cancelado')">🔴 Cancelado</button>
+          </div>
         </div>
       `;
     });
 
     pedidosHTML += `</div>`;
 
-    lista.innerHTML = snapshot.empty ? "Nenhum pedido" : pedidosHTML;
+    lista.innerHTML = encontrou ? pedidosHTML : "Nenhum pedido nesse filtro.";
   });
 };
 
