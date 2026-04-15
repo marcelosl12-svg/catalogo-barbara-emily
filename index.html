@@ -1226,26 +1226,6 @@ box.innerHTML = `
   });
 };
 
-window.renderFiltrosCategoriaAdmin = function () {
-  let box = document.getElementById("filtrosCategoriaAdmin");
-  if (!box) return;
-
-  let categorias = [...new Set(
-    produtos
-      .map(p => (p.categoria || "Sem categoria").trim())
-      .filter(c => c)
-  )].sort((a, b) => a.localeCompare(b, "pt-BR"));
-
-  box.innerHTML = `<button onclick="filtrarCategoriaAdmin('todos')">Todos</button>`;
-
-  categorias.forEach(cat => {
-    box.innerHTML += `
-      <button onclick="filtrarCategoriaAdmin('${cat.toLowerCase()}')">
-        ${cat}
-      </button>
-    `;
-  });
-};
 
 window.exportarRelatorioCSV = async function () {
   try {
@@ -1494,13 +1474,39 @@ window.renderSecaoProdutosAdmin = function () {
   container.innerHTML = html;
 };
 
-window.renderFiltrosCategoriaAdmin();
-
 window.categoriaFiltroAtual = "todos";
 
 window.filtrarCategoriaAdmin = function (categoria) {
   window.categoriaFiltroAtual = (categoria || "todos").toLowerCase();
   window.filtrarProdutosAdmin();
+};
+
+window.filtrarProdutosAdmin = function () {
+  let busca = document.getElementById("buscaProdutoAdmin")?.value.toLowerCase() || "";
+  let cards = document.querySelectorAll(".cardProdutoAdmin");
+  let totalVisivel = 0;
+
+  cards.forEach(card => {
+    let nome = card.getAttribute("data-nome") || "";
+    let categoria = card.getAttribute("data-categoria") || "";
+
+    let passaBusca = nome.includes(busca);
+    let passaCategoria =
+      window.categoriaFiltroAtual === "todos" ||
+      categoria === window.categoriaFiltroAtual;
+
+    if (passaBusca && passaCategoria) {
+      card.style.display = "block";
+      totalVisivel++;
+    } else {
+      card.style.display = "none";
+    }
+  });
+
+  let contador = document.getElementById("contadorProdutosAdmin");
+  if (contador) {
+    contador.innerHTML = `Total: ${produtos.length} | Mostrando: ${totalVisivel}`;
+  }
 };
 
 
