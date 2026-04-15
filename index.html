@@ -391,7 +391,14 @@ function carregarProdutosFirebase() {
       ...docSnap.data()
     }));
 
-    produtos.sort((a, b) => (a.ordem ?? 999) - (b.ordem ?? 999));
+    produtos.sort((a, b) => {
+  let ordemA = a.ordem ?? 999;
+  let ordemB = b.ordem ?? 999;
+
+  if (ordemA !== ordemB) return ordemA - ordemB;
+
+  return (a.nome || "").localeCompare(b.nome || "", "pt-BR");
+});
 
     gerarProdutos();
 
@@ -842,8 +849,43 @@ window.abrirPedidosAdmin = function () {
 
 window.atualizarStatusPedido = async function (pedidoId, novoStatus) {
   try {
-    await updateDoc(doc(db, "Pedidos", pedidoId), {
-      status: novoStatus
+    const pedidoRef = doc(db, "Pedidos", pedidoId);
+
+    await runTransaction(db, async (transaction) => {
+      const pedidoSnap = await transaction.get(pedidoRef);
+
+      if (!pedidoSnap.exists()) {
+        throw new Error("Pedido não encontrado");
+      }
+
+      const pedido = pedidoSnap.data();
+      const statusAtual = (pedido.status || "novo").toLowerCase();
+      const itens = Array.isArray(pedido.itens) ? pedido.itens : [];
+
+      // Se estiver mudando para cancelado e ainda não estava cancelado,
+      // devolve estoque de todos os itens
+      if (novoStatus === "cancelado" && statusAtual !== "cancelado") {
+        for (const item of itens) {
+          const produtoRef = doc(db, "Produtos", item.produtoId);
+          const produtoSnap = await transaction.get(produtoRef);
+
+          if (!produtoSnap.exists()) continue;
+
+          const produto = produtoSnap.data();
+          const estoque = produto.estoque || {};
+          const chaveEstoque = item.opcao || "unico";
+          const atual = Number(estoque[chaveEstoque] || 0);
+          const qtd = Number(item.qtd || 0);
+
+          transaction.update(produtoRef, {
+            [`estoque.${chaveEstoque}`]: atual + qtd
+          });
+        }
+      }
+
+      transaction.update(pedidoRef, {
+        status: novoStatus
+      });
     });
 
     alert(`Pedido atualizado para: ${novoStatus}`);
@@ -1575,9 +1617,11 @@ window.criarProduto = async function () {
 
 window.salvarEdicaoProdutos = async function () {
   try {
-    for (let index = 0; index < produtos.length; index++) {
-      let p = produtos[index];
+    // 1) Congela a lista atual para não depender da reordenação do onSnapshot
+    const produtosAtuais = [...produtos];
 
+    // 2) Lê TODOS os dados da tela antes de começar a salvar
+    const dadosAtualizados = produtosAtuais.map((p, index) => {
       let nome = document.getElementById(`p_nome_${index}`)?.value.trim() || "";
       let marca = document.getElementById(`p_marca_${index}`)?.value.trim() || "";
       let preco = parseFloat(document.getElementById(`p_preco_${index}`)?.value || 0);
@@ -1604,16 +1648,31 @@ window.salvarEdicaoProdutos = async function () {
         };
       }
 
-      await updateDoc(doc(db, "Produtos", p.id), {
-      nome,
-      marca,
-      preco,
-      ordem,
-      pasta,
-      imagem,
-      opcoes: novasOpcoes,
-      estoque: novoEstoque
+      return {
+        id: p.id,
+        nome,
+        marca,
+        preco,
+        ordem,
+        pasta,
+        imagem,
+        opcoes: novasOpcoes,
+        estoque: novoEstoque
+      };
     });
+
+    // 3) Agora salva tudo
+    for (const item of dadosAtualizados) {
+      await updateDoc(doc(db, "Produtos", item.id), {
+        nome: item.nome,
+        marca: item.marca,
+        preco: item.preco,
+        ordem: item.ordem,
+        pasta: item.pasta,
+        imagem: item.imagem,
+        opcoes: item.opcoes,
+        estoque: item.estoque
+      });
     }
 
     alert("Produtos e estoques atualizados com sucesso!");
