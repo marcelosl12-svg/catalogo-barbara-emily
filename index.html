@@ -1091,19 +1091,39 @@ window.mostrarSecaoAdmin = function (secao) {
   }
 };
 
+window.toggleProdutoAdmin = function (id) {
+  let box = document.getElementById(`produtoDetalhes_${id}`);
+  if (!box) return;
+
+  box.style.display = box.style.display === "none" ? "block" : "none";
+};
+
 window.filtrarProdutosAdmin = function () {
   let busca = document.getElementById("buscaProdutoAdmin")?.value.toLowerCase() || "";
   let cards = document.querySelectorAll(".cardProdutoAdmin");
+  let totalVisivel = 0;
 
   cards.forEach(card => {
     let nome = card.getAttribute("data-nome") || "";
+    let categoria = card.getAttribute("data-categoria") || "";
 
-    if (nome.includes(busca)) {
+    let passaBusca = nome.includes(busca);
+    let passaCategoria =
+      window.categoriaFiltroAtual === "todos" ||
+      categoria === window.categoriaFiltroAtual;
+
+    if (passaBusca && passaCategoria) {
       card.style.display = "block";
+      totalVisivel++;
     } else {
       card.style.display = "none";
     }
   });
+
+  let contador = document.getElementById("contadorProdutosAdmin");
+  if (contador) {
+    contador.innerHTML = `Total: ${produtos.length} | Mostrando: ${totalVisivel}`;
+  }
 };
 
 window.renderDashboardAdmin = function () {
@@ -1206,6 +1226,27 @@ box.innerHTML = `
   });
 };
 
+window.renderFiltrosCategoriaAdmin = function () {
+  let box = document.getElementById("filtrosCategoriaAdmin");
+  if (!box) return;
+
+  let categorias = [...new Set(
+    produtos
+      .map(p => (p.categoria || "Sem categoria").trim())
+      .filter(c => c)
+  )].sort((a, b) => a.localeCompare(b, "pt-BR"));
+
+  box.innerHTML = `<button onclick="filtrarCategoriaAdmin('todos')">Todos</button>`;
+
+  categorias.forEach(cat => {
+    box.innerHTML += `
+      <button onclick="filtrarCategoriaAdmin('${cat.toLowerCase()}')">
+        ${cat}
+      </button>
+    `;
+  });
+};
+
 window.exportarRelatorioCSV = async function () {
   try {
     const snapshot = await getDocs(collection(db, "Pedidos"));
@@ -1262,18 +1303,42 @@ window.renderSecaoProdutosAdmin = function () {
   let container = document.getElementById("adminConteudoPrincipal");
   if (!container) return;
 
+  let categorias = [...new Set(
+    produtos.map(p => (p.categoria || "Sem categoria").trim()).filter(c => c)
+  )].sort((a, b) => a.localeCompare(b, "pt-BR"));
+
   let html = `
-    <h2 style="margin-top:0;">Produtos</h2>
+    <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:12px;">
+      <h2 style="margin:0;">Produtos</h2>
+      <div style="
+        background:#f3f3f3;
+        border:1px solid #ddd;
+        border-radius:999px;
+        padding:8px 14px;
+        font-weight:bold;
+      ">
+        <span id="contadorProdutosAdmin">
+          Total cadastrados: ${produtos.length}
+        </span>
+      </div>
+    </div>
+
+    <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px;">
+      <button onclick="filtrarCategoriaAdmin('todos')">Todos</button>
+      ${categorias.map(cat => `
+        <button onclick="filtrarCategoriaAdmin('${cat.toLowerCase().replace(/'/g, "\\'")}')">${cat}</button>
+      `).join("")}
+    </div>
 
     <div style="margin-bottom:16px;">
-  <input
-    id="buscaProdutoAdmin"
-    placeholder="🔍 Buscar produto..."
-    style="width:100%; padding:10px; border:1px solid #ccc; border-radius:8px;"
-    oninput="filtrarProdutosAdmin()"
-  >
-</div>
-    
+      <input
+        id="buscaProdutoAdmin"
+        placeholder="🔍 Buscar produto..."
+        style="width:100%; padding:10px; border:1px solid #ccc; border-radius:8px;"
+        oninput="filtrarProdutosAdmin()"
+      >
+    </div>
+
     <div style="
       border:1px solid #ddd;
       border-radius:12px;
@@ -1290,6 +1355,7 @@ window.renderSecaoProdutosAdmin = function () {
       ">
         <input id="novo_nome" placeholder="Nome">
         <input id="novo_marca" placeholder="Marca">
+        <input id="novaCategoria" placeholder="Categoria (ex: Batons)">
         <input id="novo_preco" type="number" placeholder="Preço">
         <input id="novo_pasta" placeholder="Nome da pasta da imagem">
         <input id="novo_opcoes" placeholder="Opções (ex: Azul,Verde,Rosa)">
@@ -1309,81 +1375,106 @@ window.renderSecaoProdutosAdmin = function () {
   `;
 
   produtos.forEach((p, index) => {
-  let estoqueHTML = "";
-  let temOpcoes = Array.isArray(p.opcoes) && p.opcoes.length > 0;
-  let estoque = p.estoque || {};
+    let estoqueHTML = "";
+    let temOpcoes = Array.isArray(p.opcoes) && p.opcoes.length > 0;
+    let estoque = p.estoque || {};
 
-  if (temOpcoes) {
-    estoqueHTML += `<div style="margin-top:10px;"><b>Estoque por opção</b><br>`;
-    p.opcoes.forEach(op => {
-      estoqueHTML += `
-        <label style="display:block; margin-top:6px;">
-          ${op}:<br>
-          <input type="number" id="p_estoque_${index}_${op}" value="${estoque[op] ?? 0}" style="width:100%;">
-        </label>
+    if (temOpcoes) {
+      estoqueHTML += `<div style="margin-top:10px;"><b>Estoque por opção</b><br>`;
+      p.opcoes.forEach(op => {
+        estoqueHTML += `
+          <label style="display:block; margin-top:6px;">
+            ${op}:<br>
+            <input type="number" id="p_estoque_${index}_${op}" value="${estoque[op] ?? 0}" style="width:100%;">
+          </label>
+        `;
+      });
+      estoqueHTML += `</div>`;
+    } else {
+      estoqueHTML = `
+        <div style="margin-top:10px;">
+          <b>Estoque único</b><br>
+          <input type="number" id="p_estoque_${index}_unico" value="${estoque.unico ?? 0}" style="width:100%; margin-top:6px;">
+        </div>
       `;
-    });
-    estoqueHTML += `</div>`;
-  } else {
-    estoqueHTML = `
-      <div style="margin-top:10px;">
-        <b>Estoque único</b><br>
-        <input type="number" id="p_estoque_${index}_unico" value="${estoque.unico ?? 0}" style="width:100%; margin-top:6px;">
+    }
+
+    html += `
+      <div
+        class="cardProdutoAdmin"
+        data-nome="${p.nome.toLowerCase()}"
+        data-categoria="${(p.categoria || "Sem categoria").toLowerCase()}"
+        style="
+          border:1px solid #ddd;
+          border-radius:14px;
+          background:#fff;
+          box-shadow:0 2px 8px rgba(0,0,0,0.05);
+          overflow:hidden;
+        "
+      >
+        <div style="
+          padding:14px;
+          display:flex;
+          justify-content:space-between;
+          align-items:center;
+          gap:10px;
+          flex-wrap:wrap;
+          cursor:pointer;
+          background:#fafafa;
+        " onclick="toggleProdutoAdmin(${index})">
+          <div>
+            <b style="font-size:17px;">🧴 ${p.nome}</b><br>
+            <span style="color:#666; font-size:14px;">
+              ${p.marca} • ${p.categoria || "Sem categoria"} • R$ ${Number(p.preco).toFixed(2)} • Ordem ${p.ordem ?? 999}
+            </span>
+          </div>
+
+          <button type="button">Editar</button>
+        </div>
+
+        <div id="produtoDetalhes_${index}" style="display:none; padding:14px;">
+          Nome:<br>
+          <input id="p_nome_${index}" value="${p.nome}" style="width:100%; margin-bottom:8px;"><br>
+
+          Marca:<br>
+          <input id="p_marca_${index}" value="${p.marca}" style="width:100%; margin-bottom:8px;"><br>
+
+          Categoria:<br>
+          <input id="p_categoria_${index}" value="${p.categoria || ""}" style="width:100%; margin-bottom:8px;"><br>
+
+          Preço:<br>
+          <input type="number" id="p_preco_${index}" value="${p.preco}" style="width:100%; margin-bottom:8px;"><br>
+
+          Ordem:<br>
+          <input type="number" id="p_ordem_${index}" value="${p.ordem ?? 999}" style="width:100%; margin-bottom:8px;"><br>
+
+          Pasta:<br>
+          <input id="p_pasta_${index}" value="${p.pasta}" style="width:100%; margin-bottom:8px;"><br>
+
+          Imagem:<br>
+          <input id="p_imagem_${index}" value="${p.imagem}" style="width:100%; margin-bottom:8px;"><br>
+
+          Opções:<br>
+          <input id="p_opcoes_${index}" value="${p.opcoes.join(",")}" style="width:100%; margin-bottom:8px;"><br>
+
+          ${estoqueHTML}
+
+          <div style="margin-top:12px;">
+            <button onclick="removerProduto(${index})" style="
+              background:red;
+              color:white;
+              border:none;
+              padding:8px 10px;
+              border-radius:6px;
+              cursor:pointer;
+            ">
+              Excluir Produto
+            </button>
+          </div>
+        </div>
       </div>
     `;
-  }
-
-  html += `
-    <div
-    class="cardProdutoAdmin"
-    data-nome="${p.nome.toLowerCase()}"
-    style="
-      border:1px solid #ccc;
-      border-radius:12px;
-      padding:12px;
-      background:#fff;
-      box-shadow:0 2px 8px rgba(0,0,0,0.06);
-    ">
-      <b style="font-size:18px;">Produto ${index + 1}</b><br><br>
-
-      Nome:<br>
-      <input id="p_nome_${index}" value="${p.nome}" style="width:100%; margin-bottom:8px;"><br>
-
-      Marca:<br>
-      <input id="p_marca_${index}" value="${p.marca}" style="width:100%; margin-bottom:8px;"><br>
-
-      Preço:<br>
-      <input type="number" id="p_preco_${index}" value="${p.preco}" style="width:100%; margin-bottom:8px;"><br>
-
-      Ordem:<br>
-      <input type="number" id="p_ordem_${index}" value="${p.ordem ?? 999}" style="width:100%; margin-bottom:8px;"><br>
-      
-      Pasta:<br>
-      <input id="p_pasta_${index}" value="${p.pasta}" style="width:100%; margin-bottom:8px;"><br>
-
-      Imagem:<br>
-      <input id="p_imagem_${index}" value="${p.imagem}" style="width:100%; margin-bottom:8px;"><br>
-
-      Opções:<br>
-      <input id="p_opcoes_${index}" value="${p.opcoes.join(",")}" style="width:100%; margin-bottom:8px;"><br>
-
-      ${estoqueHTML}
-
-      <div style="margin-top:12px;">
-        <button onclick="removerProduto(${index})" style="
-          background:red;
-          color:white;
-          border:none;
-          padding:8px 10px;
-          border-radius:6px;
-          cursor:pointer;
-        ">
-          Excluir Produto
-        </button>
-      </div>
-    </div>
-  `;
-});
+  });
 
   html += `
     </div>
@@ -1402,6 +1493,16 @@ window.renderSecaoProdutosAdmin = function () {
 
   container.innerHTML = html;
 };
+
+window.renderFiltrosCategoriaAdmin();
+
+window.categoriaFiltroAtual = "todos";
+
+window.filtrarCategoriaAdmin = function (categoria) {
+  window.categoriaFiltroAtual = (categoria || "todos").toLowerCase();
+  window.filtrarProdutosAdmin();
+};
+
 
 window.renderSecaoPedidosAdmin = function () {
   let container = document.getElementById("adminConteudoPrincipal");
@@ -1568,6 +1669,7 @@ window.logoutAdmin = async function () {
 window.criarProduto = async function () {
   let nome = document.getElementById("novo_nome").value.trim();
   let marca = document.getElementById("novo_marca").value.trim();
+  let categoria = document.getElementById("novaCategoria").value.trim();
   let preco = parseFloat(document.getElementById("novo_preco").value);
   let pasta = document.getElementById("novo_pasta").value.trim();
   let imagem = document.getElementById("novo_imagem").value.trim();
@@ -1585,12 +1687,13 @@ window.criarProduto = async function () {
   let novo = {
     nome,
     marca,
+    categoria,
     preco,
     ordem: 999,
     pasta,
     imagem,
-    opcoes
-  };
+   opcoes
+};
 
   // Se tiver opções, cria estoque por opção
   // Se não tiver, cria estoque único
@@ -1624,6 +1727,7 @@ window.salvarEdicaoProdutos = async function () {
     const dadosAtualizados = produtosAtuais.map((p, index) => {
       let nome = document.getElementById(`p_nome_${index}`)?.value.trim() || "";
       let marca = document.getElementById(`p_marca_${index}`)?.value.trim() || "";
+      let categoria = document.getElementById(`p_categoria_${index}`)?.value.trim() || "";
       let preco = parseFloat(document.getElementById(`p_preco_${index}`)?.value || 0);
       let ordem = parseInt(document.getElementById(`p_ordem_${index}`)?.value || 999);
       let pasta = document.getElementById(`p_pasta_${index}`)?.value.trim() || "";
@@ -1652,13 +1756,14 @@ window.salvarEdicaoProdutos = async function () {
         id: p.id,
         nome,
         marca,
+        categoria,
         preco,
         ordem,
         pasta,
         imagem,
         opcoes: novasOpcoes,
         estoque: novoEstoque
-      };
+    };
     });
 
     // 3) Agora salva tudo
@@ -1666,6 +1771,7 @@ window.salvarEdicaoProdutos = async function () {
       await updateDoc(doc(db, "Produtos", item.id), {
         nome: item.nome,
         marca: item.marca,
+        categoria: item.categoria,
         preco: item.preco,
         ordem: item.ordem,
         pasta: item.pasta,
