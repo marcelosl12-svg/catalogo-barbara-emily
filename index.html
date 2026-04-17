@@ -262,6 +262,19 @@ font-weight:bold;
 
 <!-- PRODUTOS AUTOMÁTICOS -->
 
+<div style="padding:15px;">
+  <input
+    id="buscaCliente"
+    placeholder="🔍 Buscar produto..."
+    style="width:100%; padding:10px; border:1px solid #ccc; border-radius:8px; margin-bottom:12px;"
+    oninput="filtrarProdutosCliente()"
+  >
+
+  <div id="filtrosCategoriaCliente" style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px;">
+    <button onclick="filtrarCategoriaCliente('todos')">Todos</button>
+  </div>
+</div>
+
 <div class="grid" id="produtosContainer"></div>
 
 
@@ -349,6 +362,7 @@ const auth = getAuth(app);
 
 let carrinho = [];
 let produtos = [];
+let categoriaFiltroCliente = "todos";
 
 // 🔐 login admin
 let adminLogado = false;
@@ -401,6 +415,8 @@ function carregarProdutosFirebase() {
 });
 
     gerarProdutos();
+    renderFiltrosCategoriaCliente();
+    filtrarProdutosCliente();
 
     produtos.forEach((p, index) => {
       let id = index + 1;
@@ -430,7 +446,7 @@ function gerarProdutos() {
     }
 
     container.innerHTML += `
-      <div class="card">
+      <div class="card" data-nome="${p.nome.toLowerCase()}" data-categoria="${(p.categoria || 'sem categoria').toLowerCase()}">
         <img id="img${idTela}" 
           src="imagens/${p.pasta}/${p.imagem}"
           onerror="this.onerror=null; this.src='imagens/sem-imagem.jpg'">
@@ -1277,6 +1293,53 @@ window.exportarRelatorioCSV = async function () {
     console.error("Erro ao exportar CSV:", erro);
     alert("Erro ao exportar relatório.");
   }
+};
+
+window.renderFiltrosCategoriaCliente = function () {
+  let box = document.getElementById("filtrosCategoriaCliente");
+  if (!box) return;
+
+  let categorias = [...new Set(
+    produtos
+      .map(p => (p.categoria || "Sem categoria").trim())
+      .filter(c => c)
+  )].sort((a, b) => a.localeCompare(b, "pt-BR"));
+
+  box.innerHTML = `<button onclick="filtrarCategoriaCliente('todos')">Todos</button>`;
+
+  categorias.forEach(cat => {
+    box.innerHTML += `
+      <button onclick="filtrarCategoriaCliente('${cat.toLowerCase().replace(/'/g, "\\'")}')">
+        ${cat}
+      </button>
+    `;
+  });
+};
+
+window.filtrarCategoriaCliente = function (categoria) {
+  categoriaFiltroCliente = (categoria || "todos").toLowerCase();
+  window.filtrarProdutosCliente();
+};
+
+window.filtrarProdutosCliente = function () {
+  let busca = document.getElementById("buscaCliente")?.value.toLowerCase() || "";
+  let cards = document.querySelectorAll("#produtosContainer .card");
+
+  cards.forEach(card => {
+    let nome = card.getAttribute("data-nome") || "";
+    let categoria = card.getAttribute("data-categoria") || "";
+
+    let passaBusca = nome.includes(busca);
+    let passaCategoria =
+      categoriaFiltroCliente === "todos" ||
+      categoria === categoriaFiltroCliente;
+
+    if (passaBusca && passaCategoria) {
+      card.style.display = "block";
+    } else {
+      card.style.display = "none";
+    }
+  });
 };
 
 window.renderSecaoProdutosAdmin = function () {
