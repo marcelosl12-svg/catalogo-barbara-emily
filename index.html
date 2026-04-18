@@ -276,6 +276,9 @@ font-weight:bold;
 </div>
 
 <div class="grid" id="produtosContainer"></div>
+<div id="mensagemSemProdutos" style="display:none; text-align:center; padding:20px; color:#666; font-weight:bold;">
+  🔍 Nenhum produto encontrado
+</div>
 
 
 
@@ -1305,25 +1308,46 @@ window.renderFiltrosCategoriaCliente = function () {
       .filter(c => c)
   )].sort((a, b) => a.localeCompare(b, "pt-BR"));
 
-  box.innerHTML = `<button onclick="filtrarCategoriaCliente('todos')">Todos</button>`;
+  box.innerHTML = "";
 
-  categorias.forEach(cat => {
-    box.innerHTML += `
-      <button onclick="filtrarCategoriaCliente('${cat.toLowerCase().replace(/'/g, "\\'")}')">
-        ${cat}
+  const criarBotao = (rotulo, valor) => {
+    let ativo = categoriaFiltroCliente === valor.toLowerCase();
+
+    return `
+      <button
+        onclick="filtrarCategoriaCliente('${valor.toLowerCase().replace(/'/g, "\\'")}')"
+        style="
+          padding:8px 12px;
+          border-radius:999px;
+          border:1px solid ${ativo ? "#8b0000" : "#ccc"};
+          background:${ativo ? "#8b0000" : "#fff"};
+          color:${ativo ? "#fff" : "#333"};
+          cursor:pointer;
+          font-weight:${ativo ? "bold" : "normal"};
+        "
+      >
+        ${rotulo}
       </button>
     `;
+  };
+
+  box.innerHTML += criarBotao("Todos", "todos");
+
+  categorias.forEach(cat => {
+    box.innerHTML += criarBotao(cat, cat);
   });
 };
 
 window.filtrarCategoriaCliente = function (categoria) {
   categoriaFiltroCliente = (categoria || "todos").toLowerCase();
+  window.renderFiltrosCategoriaCliente();
   window.filtrarProdutosCliente();
 };
 
 window.filtrarProdutosCliente = function () {
   let busca = document.getElementById("buscaCliente")?.value.toLowerCase() || "";
   let cards = document.querySelectorAll("#produtosContainer .card");
+  let totalVisivel = 0;
 
   cards.forEach(card => {
     let nome = card.getAttribute("data-nome") || "";
@@ -1336,10 +1360,16 @@ window.filtrarProdutosCliente = function () {
 
     if (passaBusca && passaCategoria) {
       card.style.display = "block";
+      totalVisivel++;
     } else {
       card.style.display = "none";
     }
   });
+
+  let mensagem = document.getElementById("mensagemSemProdutos");
+  if (mensagem) {
+    mensagem.style.display = totalVisivel === 0 ? "block" : "none";
+  }
 };
 
 window.renderSecaoProdutosAdmin = function () {
@@ -1737,20 +1767,35 @@ window.logoutAdmin = async function () {
 
 window.criarProduto = async function () {
   let nome = document.getElementById("novo_nome").value.trim();
-  let marca = document.getElementById("novo_marca").value.trim();
-  let categoria = document.getElementById("novaCategoria").value.trim();
+  let marca = document.getElementById("novo_marca").value.trim() || "";
+  let categoria = document.getElementById("novaCategoria").value.trim() || "";
   let preco = parseFloat(document.getElementById("novo_preco").value);
-  let pasta = document.getElementById("novo_pasta").value.trim();
-  let imagem = document.getElementById("novo_imagem").value.trim();
+  let pasta = document.getElementById("novo_pasta").value.trim() || "";
+  let imagem = document.getElementById("novo_imagem").value.trim() || "";
 
   let opcoesTexto = document.getElementById("novo_opcoes").value.trim();
   let opcoes = opcoesTexto
     ? opcoesTexto.split(",").map(o => o.trim()).filter(o => o)
     : [];
 
-  if (!nome || !marca || isNaN(preco) || !pasta || !imagem) {
-    alert("Preencha os campos obrigatórios.");
+  if (!nome) {
+    alert("Informe o nome do produto");
     return;
+  }
+
+  if (isNaN(preco) || preco <= 0) {
+    alert("Informe um preço válido");
+    return;
+  }
+
+  let estoque = {};
+
+  if (opcoes.length > 0) {
+    opcoes.forEach(op => {
+      estoque[op] = 0;
+    });
+  } else {
+    estoque = { unico: 0 };
   }
 
   let novo = {
@@ -1761,21 +1806,9 @@ window.criarProduto = async function () {
     ordem: 999,
     pasta,
     imagem,
-   opcoes
-};
-
-  // Se tiver opções, cria estoque por opção
-  // Se não tiver, cria estoque único
-  if (opcoes.length > 0) {
-    novo.estoque = {};
-    opcoes.forEach(op => {
-      novo.estoque[op] = 0;
-    });
-  } else {
-    novo.estoque = {
-      unico: 0
-    };
-  }
+    opcoes,
+    estoque
+  };
 
   try {
     await addDoc(collection(db, "Produtos"), novo);
