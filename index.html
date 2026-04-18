@@ -449,9 +449,26 @@ function gerarProdutos() {
     }
 
     container.innerHTML += `
-      <div class="card" data-nome="${p.nome.toLowerCase()}" data-categoria="${(p.categoria || 'sem categoria').toLowerCase()}">
-        <img id="img${idTela}" 
-          src="imagens/${p.pasta}/${p.imagem}"
+  <div class="card" data-nome="${p.nome.toLowerCase()}" data-categoria="${(p.categoria || 'sem categoria').toLowerCase()}" style="position:relative;">
+    ${p.promocao ? `
+      <div style="
+        position:absolute;
+        top:10px;
+        left:10px;
+        background:#8b0000;
+        color:#fff;
+        padding:6px 10px;
+        border-radius:999px;
+        font-size:12px;
+        font-weight:bold;
+        z-index:2;
+      ">
+        🔥 Promoção
+      </div>
+    ` : ""}
+
+    <img id="img${idTela}" 
+      src="imagens/${p.pasta}/${p.imagem}"
           onerror="this.onerror=null; this.src='imagens/sem-imagem.jpg'">
 
         <h3>${p.nome} - ${p.marca}</h3>
@@ -1433,6 +1450,11 @@ window.renderSecaoProdutosAdmin = function () {
         <input id="novo_pasta" placeholder="Nome da pasta da imagem">
         <input id="novo_opcoes" placeholder="Opções (ex: Azul,Verde,Rosa)">
         <input id="novo_imagem" placeholder="Imagem principal (ex: 1.jpg)">
+
+        <label style="display:flex; align-items:center; gap:8px; margin-top:6px;">
+          <input type="checkbox" id="novaPromocao">
+           Produto em promoção
+        </label>
       </div>
 
       <div style="margin-top:12px;">
@@ -1514,6 +1536,11 @@ window.renderSecaoProdutosAdmin = function () {
 
           Categoria:<br>
           <input id="p_categoria_${index}" value="${p.categoria || ""}" style="width:100%; margin-bottom:8px;"><br>
+
+          <label style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+            <input type="checkbox" id="p_promocao_${index}" ${p.promocao ? "checked" : ""}>
+            Produto em promoção
+          </label>
 
           Preço:<br>
           <input type="number" id="p_preco_${index}" value="${p.preco}" style="width:100%; margin-bottom:8px;"><br>
@@ -1772,6 +1799,7 @@ window.criarProduto = async function () {
   let preco = parseFloat(document.getElementById("novo_preco").value);
   let pasta = document.getElementById("novo_pasta").value.trim() || "";
   let imagem = document.getElementById("novo_imagem").value.trim() || "";
+  let promocao = document.getElementById("novaPromocao").checked;
 
   let opcoesTexto = document.getElementById("novo_opcoes").value.trim();
   let opcoes = opcoesTexto
@@ -1802,6 +1830,7 @@ window.criarProduto = async function () {
     nome,
     marca,
     categoria,
+    promocao,
     preco,
     ordem: 999,
     pasta,
@@ -1830,6 +1859,7 @@ window.salvarEdicaoProdutos = async function () {
       let nome = document.getElementById(`p_nome_${index}`)?.value.trim() || "";
       let marca = document.getElementById(`p_marca_${index}`)?.value.trim() || "";
       let categoria = document.getElementById(`p_categoria_${index}`)?.value.trim() || "";
+      let promocao = document.getElementById(`p_promocao_${index}`)?.checked || false;
       let preco = parseFloat(document.getElementById(`p_preco_${index}`)?.value || 0);
       let ordem = parseInt(document.getElementById(`p_ordem_${index}`)?.value || 999);
       let pasta = document.getElementById(`p_pasta_${index}`)?.value.trim() || "";
@@ -1859,6 +1889,7 @@ window.salvarEdicaoProdutos = async function () {
         nome,
         marca,
         categoria,
+        promocao,
         preco,
         ordem,
         pasta,
@@ -1874,6 +1905,7 @@ window.salvarEdicaoProdutos = async function () {
         nome: item.nome,
         marca: item.marca,
         categoria: item.categoria,
+        promocao: item.promocao,
         preco: item.preco,
         ordem: item.ordem,
         pasta: item.pasta,
