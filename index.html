@@ -46,35 +46,44 @@ line-height:1.5;
 margin-top:5px;
 }
 
-.cartIcon{
-background:white;
-width:42px;
-height:42px;
+.cartBtn{
+position:fixed;
+top:18px;
+right:18px;
+width:58px;
+height:58px;
+border:none;
 border-radius:50%;
-display:flex;
-align-items:center;
-justify-content:center;
+background:#fff;
+box-shadow:0 4px 12px rgba(0,0,0,0.25);
 cursor:pointer;
-position:relative;
-font-size:20px;
+z-index:999;
+display:flex;
+align-items:center;
+justify-content:center;
+font-size:26px;
+transition:0.2s;
 }
 
-.cartBadge{
+.cartBtn:hover{
+transform:scale(1.05);
+}
+
+#cartBadge{
 position:absolute;
-top:-5px;
-right:-5px;
-background:black;
-color:white;
+top:-6px;
+right:-4px;
+background:#000;
+color:#fff;
 font-size:12px;
+font-weight:bold;
+width:22px;
+height:22px;
 border-radius:50%;
-width:18px;
-height:18px;
 display:flex;
 align-items:center;
 justify-content:center;
 }
-
-
 
 /* PRODUTOS */
 
@@ -246,11 +255,10 @@ font-weight:bold;
 </div>
 
 
-  <div class="cartIcon" onclick="toggleCarrinho()">
+  <button class="cartBtn" onclick="toggleCarrinho()">
 🛒
-<span id="cartBadge" class="cartBadge">0</span>
-</div>
-
+<span id="cartBadge">0</span>
+</button>
 
 </header>
 
