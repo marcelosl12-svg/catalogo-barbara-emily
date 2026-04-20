@@ -255,11 +255,6 @@ font-weight:bold;
 </header>
 
 
-
-
-<!-- PRODUTOS -->
-
-
 <!-- PRODUTOS AUTOMÁTICOS -->
 
 <div style="padding:15px;">
@@ -294,14 +289,14 @@ font-weight:bold;
 
 <p class="totalBox">Total: R$ <span id="total">0.00</span></p>
 
-<select id="pagamento">
+<select id="pagamento" onchange="atualizarCarrinho()">
 <option value="">Forma de pagamento</option>
 <option>Dinheiro</option>
 <option>PIX</option>
 <option>Cartão</option>
 </select>
 
-<select id="entrega">
+<select id="entrega" onchange="atualizarCarrinho()">
 <option value="0">Opções de entrega</option>
 <option value="0">Retirar na loja</option>
 <option value="0">Via Uber flash (por conta do cliente)</option>
@@ -366,6 +361,10 @@ const auth = getAuth(app);
 let carrinho = [];
 let produtos = [];
 let categoriaFiltroCliente = "todos";
+
+let configLoja = {
+  descontoPix: 5
+};
 
 // 🔐 login admin
 let adminLogado = false;
@@ -632,44 +631,70 @@ async function baixarEstoqueProduto(produtoId, opcao, quantidade = 1) {
   });
 }
 
-function atualizarCarrinho(){
+function atualizarCarrinho() {
+  let lista = document.getElementById("lista");
+  lista.innerHTML = "";
 
-let lista=document.getElementById("lista")
-lista.innerHTML=""
+  let subtotal = 0;
+  let subtotalElegivelPix = 0;
+  let qtd = 0;
 
-let total=0
-let qtd=0
+  carrinho.forEach((item, index) => {
+    let sub = item.preco * item.qtd;
 
-carrinho.forEach((item,index)=>{
+    subtotal += sub;
+    qtd += item.qtd;
 
-let sub=item.preco*item.qtd
-total+=sub
-qtd+=item.qtd
+    // Só entra no desconto se NÃO for promoção
+    if (!item.promocao) {
+      subtotalElegivelPix += sub;
+    }
 
-lista.innerHTML+=`
-<div class="cartItem">
-<div>
-${item.nome}<br>
-R$ ${item.preco.toFixed(2)}
-</div>
+    lista.innerHTML += `
+      <div class="cartItem">
+        <div>
+          ${item.nome}<br>
+          R$ ${item.preco.toFixed(2)}
+        </div>
 
-<div class="qtyControls">
-<button class="qtyBtn" onclick="diminuir(${index})">-</button>
-<b>${item.qtd}</b>
-<button class="qtyBtn" onclick="aumentar(${index})">+</button>
-<button class="removeBtn" onclick="remover(${index})">X</button>
-</div>
-</div>
-`
-})
+        <div class="qtyControls">
+          <button class="qtyBtn" onclick="diminuir(${index})">-</button>
+          <b>${item.qtd}</b>
+          <button class="qtyBtn" onclick="aumentar(${index})">+</button>
+          <button class="removeBtn" onclick="remover(${index})">X</button>
+        </div>
+      </div>
+    `;
+  });
 
-let taxa=parseFloat(document.getElementById("entrega").value || 0)
+  let taxa = parseFloat(document.getElementById("entrega").value || 0);
+  let pagamento = document.getElementById("pagamento").value || "";
 
-total+=taxa
+  let desconto = 0;
 
-document.getElementById("total").innerText=total.toFixed(2)
-document.getElementById("cartBadge").innerText=qtd
+  if (pagamento.toLowerCase() === "pix") {
+    desconto = subtotalElegivelPix * (Number(configLoja.descontoPix || 0) / 100);
+  }
 
+  let total = subtotal + taxa - desconto;
+
+  lista.innerHTML += `
+    <div style="margin-top:12px; border-top:1px solid #ddd; padding-top:10px;">
+      <div>Subtotal: R$ ${subtotal.toFixed(2)}</div>
+      <div>Entrega: R$ ${taxa.toFixed(2)}</div>
+
+      ${
+        desconto > 0
+          ? `<div style="color:green;">
+              Desconto PIX (${configLoja.descontoPix}%): - R$ ${desconto.toFixed(2)}
+            </div>`
+          : ""
+      }
+    </div>
+  `;
+
+  document.getElementById("total").innerText = total.toFixed(2);
+  document.getElementById("cartBadge").innerText = qtd;
 }
 
 window.addProduto = async function(produtoId, selectId) {
@@ -703,12 +728,13 @@ window.addProduto = async function(produtoId, selectId) {
       item.tempo = Date.now();
     } else {
       carrinho.push({
-        produtoId: produto.id,
-        nome: nomeFinal,
-        preco: Number(produto.preco),
-        qtd: 1,
-        opcao: opcaoTexto,
-        tempo: Date.now()
+       produtoId: produto.id,
+       nome: nomeFinal,         
+       preco: Number(produto.preco),
+       qtd: 1,
+       opcao: opcaoTexto,
+       promocao: produto.promocao || false,
+       tempo: Date.now()
       });
     }
 
@@ -807,23 +833,40 @@ window.gerarPedido = async function () {
   }
 
   let texto = "Pedido\n\n";
-  let total = 0;
+  let subtotal = 0;
+  let subtotalElegivelPix = 0;
 
   carrinho.forEach(i => {
     let sub = i.preco * i.qtd;
-    total += sub;
+    subtotal += sub;
+
+    if (!i.promocao) {
+      subtotalElegivelPix += sub;
+    }
+
     texto += `${i.nome}\n${i.qtd}Un R$ ${i.preco.toFixed(2)}\n\n`;
   });
 
-  total += taxa;
+  let desconto = 0;
+  if (pagamento.toLowerCase() === "pix") {
+    desconto = subtotalElegivelPix * (Number(configLoja.descontoPix || 0) / 100);
+  }
 
+  let total = subtotal + taxa - desconto;
+
+  texto += `Subtotal: R$ ${subtotal.toFixed(2)}\n`;
   texto += `Entrega: ${entregaTexto}\n`;
   texto += `Taxa: R$ ${taxa.toFixed(2)}\n`;
+
+  if (desconto > 0) {
+    texto += `Desconto PIX (${configLoja.descontoPix}%): - R$ ${desconto.toFixed(2)}\n`;
+  }
+
   texto += `Pagamento: ${pagamento}\n`;
   texto += `Total: R$ ${total.toFixed(2)}`;
 
   try {
-    await salvarPedidoFirebase();
+    await salvarPedidoFirebaseComDesconto(subtotal, subtotalElegivelPix, taxa, desconto, total, pagamento, entregaTexto);
 
     document.getElementById("pedido").value = texto;
     await navigator.clipboard.writeText(texto);
@@ -837,6 +880,31 @@ window.gerarPedido = async function () {
     alert("Erro ao salvar pedido.");
   }
 };
+
+async function salvarPedidoFirebaseComDesconto(subtotal, subtotalElegivelPix, taxa, desconto, total, pagamento, entregaTexto) {
+  let itens = carrinho.map(item => ({
+    produtoId: item.produtoId,
+    nome: item.nome,
+    opcao: item.opcao,
+    preco: item.preco,
+    qtd: item.qtd,
+    promocao: item.promocao || false
+  }));
+
+  await addDoc(collection(db, "Pedidos"), {
+    itens,
+    pagamento,
+    entrega: entregaTexto,
+    subtotal,
+    subtotalElegivelPix,
+    taxaEntrega: taxa,
+    desconto,
+    total,
+    status: "novo",
+    criadoEm: serverTimestamp()
+  });
+}
+
 
 window.abrirPedidosAdmin = function () {
   let html = `
@@ -898,8 +966,6 @@ window.atualizarStatusPedido = async function (pedidoId, novoStatus) {
       const statusAtual = (pedido.status || "novo").toLowerCase();
       const itens = Array.isArray(pedido.itens) ? pedido.itens : [];
 
-      // Se estiver mudando para cancelado e ainda não estava cancelado,
-      // devolve estoque de todos os itens
       if (novoStatus === "cancelado" && statusAtual !== "cancelado") {
         for (const item of itens) {
           const produtoRef = doc(db, "Produtos", item.produtoId);
@@ -931,43 +997,6 @@ window.atualizarStatusPedido = async function (pedidoId, novoStatus) {
   }
 };
 
-async function salvarPedidoFirebase() {
-  if (carrinho.length === 0) {
-    throw new Error("Carrinho vazio");
-  }
-
-  let pagamento = document.getElementById("pagamento").value;
-  let entregaSelect = document.getElementById("entrega");
-  let entregaTexto = entregaSelect.options[entregaSelect.selectedIndex].text;
-  let taxa = parseFloat(entregaSelect.value || 0);
-
-  let total = 0;
-
-  let itens = carrinho.map(item => {
-    let subtotal = item.preco * item.qtd;
-    total += subtotal;
-
-    return {
-      produtoId: item.produtoId,
-      nome: item.nome,
-      opcao: item.opcao,
-      preco: item.preco,
-      qtd: item.qtd
-    };
-  });
-
-  total += taxa;
-
-  await addDoc(collection(db, "Pedidos"), {
-    itens,
-    pagamento,
-    entrega: entregaTexto,
-    taxaEntrega: taxa,
-    total,
-    status: "novo",
-    criadoEm: serverTimestamp()
-  });
-}
 
 function atualizarSelect(selectId, stockId) {
   let select = document.getElementById(selectId);
@@ -1167,6 +1196,23 @@ window.renderDashboardAdmin = function () {
   if (!container) return;
 
   container.innerHTML = `
+    <div style="
+      border:1px solid #ddd;
+      border-radius:12px;
+      padding:14px;
+      margin-bottom:16px;
+      background:#fafafa;
+    ">
+      <h3 style="margin-top:0;">Configurações da loja</h3>
+      <label>
+        Desconto no PIX (%):
+        <input type="number" id="descontoPixAdmin" value="${configLoja.descontoPix}" style="width:100%; margin-top:6px;">
+      </label>
+      <div style="margin-top:10px;">
+        <button onclick="salvarConfigLoja()">Salvar configuração</button>
+      </div>
+    </div>
+
     <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:16px;">
       <button onclick="dashboardVendas('hoje')">Hoje</button>
       <button onclick="dashboardVendas('7dias')">7 dias</button>
@@ -1179,6 +1225,13 @@ window.renderDashboardAdmin = function () {
   `;
 
   window.dashboardVendas("total");
+};
+
+window.salvarConfigLoja = function () {
+  let desconto = parseFloat(document.getElementById("descontoPixAdmin")?.value || 0);
+  configLoja.descontoPix = isNaN(desconto) ? 0 : desconto;
+  alert("Configuração salva!");
+  atualizarCarrinho();
 };
 
 window.dashboardVendas = function () {
