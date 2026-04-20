@@ -966,20 +966,34 @@ window.atualizarStatusPedido = async function (pedidoId, novoStatus) {
       const statusAtual = (pedido.status || "novo").toLowerCase();
       const itens = Array.isArray(pedido.itens) ? pedido.itens : [];
 
+      // Só devolve estoque se estiver cancelando agora
       if (novoStatus === "cancelado" && statusAtual !== "cancelado") {
+        // 1) LER todos os produtos primeiro
+        const produtosLidos = [];
+
         for (const item of itens) {
+          if (!item.produtoId) continue;
+
           const produtoRef = doc(db, "Produtos", item.produtoId);
           const produtoSnap = await transaction.get(produtoRef);
 
           if (!produtoSnap.exists()) continue;
 
-          const produto = produtoSnap.data();
-          const estoque = produto.estoque || {};
-          const chaveEstoque = item.opcao || "unico";
-          const atual = Number(estoque[chaveEstoque] || 0);
-          const qtd = Number(item.qtd || 0);
+          produtosLidos.push({
+            item,
+            produtoRef,
+            produto: produtoSnap.data()
+          });
+        }
 
-          transaction.update(produtoRef, {
+        // 2) SÓ DEPOIS fazer os updates
+        for (const dado of produtosLidos) {
+          const estoque = dado.produto.estoque || {};
+          const chaveEstoque = dado.item.opcao || "unico";
+          const atual = Number(estoque[chaveEstoque] || 0);
+          const qtd = Number(dado.item.qtd || 0);
+
+          transaction.update(dado.produtoRef, {
             [`estoque.${chaveEstoque}`]: atual + qtd
           });
         }
