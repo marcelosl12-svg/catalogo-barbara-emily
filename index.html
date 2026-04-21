@@ -297,17 +297,17 @@ font-weight:bold;
 
 <p class="totalBox">Total: R$ <span id="total">0.00</span></p>
 
-<select id="pagamento" onchange="atualizarCarrinho()">
-<option value="">Forma de pagamento</option>
-<option>Dinheiro</option>
-<option>PIX</option>
-<option>Cartão</option>
+<select id="pagamento">
+  <option value="">Forma de pagamento</option>
+  <option value="Dinheiro">Dinheiro</option>
+  <option value="PIX">PIX</option>
+  <option value="Cartao">Cartão</option>
 </select>
 
-<select id="entrega" onchange="atualizarCarrinho()">
-<option value="0">Opções de entrega</option>
-<option value="0">Retirar na loja</option>
-<option value="0">Via Uber flash (por conta do cliente)</option>
+<select id="entrega">
+  <option value="">Opções de entrega</option>
+  <option value="0">Retirar na loja</option>
+  <option value="0">Via Uber flash (por conta do cliente)</option>
 </select>
 
 <div id="lista"></div>
@@ -371,7 +371,8 @@ let produtos = [];
 let categoriaFiltroCliente = "todos";
 
 let configLoja = {
-  descontoPix: 5
+  descontoPix: 5,
+  minimoPix: 50
 };
 
 // 🔐 login admin
@@ -608,7 +609,10 @@ let tempoReserva = 5 * 60 * 1000 // 5 minutos
 
 window.toggleCarrinho = function () {
   let c = document.getElementById("cartPanel");
+  if (!c) return;
+
   c.style.display = c.style.display === "block" ? "none" : "block";
+  atualizarCarrinho();
 };
 
 async function baixarEstoqueProduto(produtoId, opcao, quantidade = 1) {
@@ -641,6 +645,13 @@ async function baixarEstoqueProduto(produtoId, opcao, quantidade = 1) {
 
 function atualizarCarrinho() {
   let lista = document.getElementById("lista");
+  let pagamentoSelect = document.getElementById("pagamento");
+  let entregaSelect = document.getElementById("entrega");
+  let totalEl = document.getElementById("total");
+  let badgeEl = document.getElementById("cartBadge");
+
+  if (!lista || !pagamentoSelect || !entregaSelect || !totalEl || !badgeEl) return;
+
   lista.innerHTML = "";
 
   let subtotal = 0;
@@ -648,12 +659,11 @@ function atualizarCarrinho() {
   let qtd = 0;
 
   carrinho.forEach((item, index) => {
-    let sub = item.preco * item.qtd;
+    let sub = Number(item.preco || 0) * Number(item.qtd || 0);
 
     subtotal += sub;
-    qtd += item.qtd;
+    qtd += Number(item.qtd || 0);
 
-    // Só entra no desconto se NÃO for promoção
     if (!item.promocao) {
       subtotalElegivelPix += sub;
     }
@@ -662,7 +672,7 @@ function atualizarCarrinho() {
       <div class="cartItem">
         <div>
           ${item.nome}<br>
-          R$ ${item.preco.toFixed(2)}
+          R$ ${Number(item.preco).toFixed(2)}
         </div>
 
         <div class="qtyControls">
@@ -675,14 +685,16 @@ function atualizarCarrinho() {
     `;
   });
 
-  let taxa = parseFloat(document.getElementById("entrega").value || 0);
-  let pagamento = document.getElementById("pagamento").value || "";
+  let taxa = parseFloat(entregaSelect.value || 0);
+let pagamento = String(pagamentoSelect.value || "").trim();
 
-  let desconto = 0;
+let desconto = 0;
+let minimoPix = Number(configLoja.minimoPix || 0);
+let descontoPix = Number(configLoja.descontoPix || 0);
 
-  if (pagamento.toLowerCase() === "pix") {
-    desconto = subtotalElegivelPix * (Number(configLoja.descontoPix || 0) / 100);
-  }
+if (pagamento === "PIX" && subtotalElegivelPix >= minimoPix) {
+  desconto = subtotalElegivelPix * (descontoPix / 100);
+}
 
   let total = subtotal + taxa - desconto;
 
@@ -692,17 +704,40 @@ function atualizarCarrinho() {
       <div>Entrega: R$ ${taxa.toFixed(2)}</div>
 
       ${
+        pagamento === "PIX" && subtotalElegivelPix < minimoPix
+          ? `<div style="color:#8b0000;">
+              Desconto no PIX acima de R$ ${minimoPix.toFixed(2)} Exceto promoções
+            </div>`
+          : ""
+      }
+
+      ${
         desconto > 0
-          ? `<div style="color:green;">
-              Desconto PIX (${configLoja.descontoPix}%): - R$ ${desconto.toFixed(2)}
+          ? `<div style="color:green; font-weight:bold;">
+              Desconto PIX (${descontoPix}%): - R$ ${desconto.toFixed(2)}
             </div>`
           : ""
       }
     </div>
   `;
 
-  document.getElementById("total").innerText = total.toFixed(2);
-  document.getElementById("cartBadge").innerText = qtd;
+  totalEl.innerText = total.toFixed(2);
+  badgeEl.innerText = qtd;
+}
+
+function configurarEventosCarrinho() {
+  let pagamentoSelect = document.getElementById("pagamento");
+  let entregaSelect = document.getElementById("entrega");
+
+  if (pagamentoSelect) {
+    pagamentoSelect.addEventListener("change", atualizarCarrinho);
+    pagamentoSelect.addEventListener("input", atualizarCarrinho);
+  }
+
+  if (entregaSelect) {
+    entregaSelect.addEventListener("change", atualizarCarrinho);
+    entregaSelect.addEventListener("input", atualizarCarrinho);
+  }
 }
 
 window.addProduto = async function(produtoId, selectId) {
@@ -812,6 +847,15 @@ window.limparCarrinho = async function() {
     }
 
     carrinho = [];
+
+    let pagamentoSelect = document.getElementById("pagamento");
+    let entregaSelect = document.getElementById("entrega");
+    let pedidoEl = document.getElementById("pedido");
+
+    if (pagamentoSelect) pagamentoSelect.selectedIndex = 0;
+    if (entregaSelect) entregaSelect.selectedIndex = 0;
+    if (pedidoEl) pedidoEl.value = "";
+
     atualizarCarrinho();
   } catch (erro) {
     console.error("Erro ao limpar carrinho:", erro);
@@ -856,8 +900,14 @@ window.gerarPedido = async function () {
   });
 
   let desconto = 0;
-  if (pagamento.toLowerCase() === "pix") {
-    desconto = subtotalElegivelPix * (Number(configLoja.descontoPix || 0) / 100);
+  let minimoPix = Number(configLoja.minimoPix || 0);
+  let descontoPix = Number(configLoja.descontoPix || 0);
+
+  if (
+    pagamento.toLowerCase() === "pix" &&
+    subtotalElegivelPix >= minimoPix
+  ) {
+    desconto = subtotalElegivelPix * (descontoPix / 100);
   }
 
   let total = subtotal + taxa - desconto;
@@ -867,14 +917,24 @@ window.gerarPedido = async function () {
   texto += `Taxa: R$ ${taxa.toFixed(2)}\n`;
 
   if (desconto > 0) {
-    texto += `Desconto PIX (${configLoja.descontoPix}%): - R$ ${desconto.toFixed(2)}\n`;
+    texto += `Desconto PIX (${descontoPix}%): - R$ ${desconto.toFixed(2)}\n`;
+  } else if (pagamento.toLowerCase() === "pix" && subtotalElegivelPix < minimoPix) {
+    texto += `Sem desconto PIX (mínimo de R$ ${minimoPix.toFixed(2)} em produtos elegíveis)\n`;
   }
 
   texto += `Pagamento: ${pagamento}\n`;
   texto += `Total: R$ ${total.toFixed(2)}`;
 
   try {
-    await salvarPedidoFirebaseComDesconto(subtotal, subtotalElegivelPix, taxa, desconto, total, pagamento, entregaTexto);
+    await salvarPedidoFirebaseComDesconto(
+      subtotal,
+      subtotalElegivelPix,
+      taxa,
+      desconto,
+      total,
+      pagamento,
+      entregaTexto
+    );
 
     document.getElementById("pedido").value = texto;
     await navigator.clipboard.writeText(texto);
@@ -882,7 +942,17 @@ window.gerarPedido = async function () {
     alert("Pedido salvo no Firebase e copiado!");
 
     carrinho = [];
-    atualizarCarrinho();
+
+    // limpa os campos para não “grudar” a compra anterior
+    let pagamentoSelect = document.getElementById("pagamento");
+    let entregaSelect = document.getElementById("entrega");
+    let pedidoEl = document.getElementById("pedido");
+
+    if (pagamentoSelect) pagamentoSelect.selectedIndex = 0;
+    if (entregaSelect) entregaSelect.selectedIndex = 0;
+    if (pedidoEl) pedidoEl.value = "";
+
+  atualizarCarrinho();
   } catch (erro) {
     console.error("Erro ao gerar pedido:", erro);
     alert("Erro ao salvar pedido.");
@@ -1230,6 +1300,12 @@ window.renderDashboardAdmin = function () {
         Desconto no PIX (%):
         <input type="number" id="descontoPixAdmin" value="${configLoja.descontoPix}" style="width:100%; margin-top:6px;">
       </label>
+
+      <label style="display:block; margin-top:10px;">
+        Valor mínimo para desconto PIX:
+        <input type="number" id="minimoPixAdmin" value="${configLoja.minimoPix}" style="width:100%; margin-top:6px;">
+      </label>
+
       <div style="margin-top:10px;">
         <button onclick="salvarConfigLoja()">Salvar configuração</button>
       </div>
@@ -1251,7 +1327,11 @@ window.renderDashboardAdmin = function () {
 
 window.salvarConfigLoja = function () {
   let desconto = parseFloat(document.getElementById("descontoPixAdmin")?.value || 0);
+  let minimo = parseFloat(document.getElementById("minimoPixAdmin")?.value || 0);
+
   configLoja.descontoPix = isNaN(desconto) ? 0 : desconto;
+  configLoja.minimoPix = isNaN(minimo) ? 0 : minimo;
+
   alert("Configuração salva!");
   atualizarCarrinho();
 };
@@ -2027,6 +2107,8 @@ window.salvarAdmin = function () {
 window.onload = function () {
   carregarDados();
   carregarProdutosFirebase();
+  configurarEventosCarrinho();
+  atualizarCarrinho();
 };
 
 setInterval(limparReservas, 5000);
