@@ -607,6 +607,31 @@ async function devolverEstoqueProduto(produtoId, opcao, quantidade = 1) {
 
 let tempoReserva = 5 * 60 * 1000 // 5 minutos
 
+function salvarCarrinhoLocal() {
+  localStorage.setItem("carrinho", JSON.stringify(carrinho));
+}
+
+async function carregarCarrinhoLocal() {
+  let dados = localStorage.getItem("carrinho");
+  if (!dados) return;
+
+  carrinho = JSON.parse(dados);
+
+  let agora = Date.now();
+
+  for (let i = carrinho.length - 1; i >= 0; i--) {
+    let item = carrinho[i];
+
+    if (agora - item.tempo > tempoReserva) {
+      await devolverEstoqueProduto(item.produtoId, item.opcao, item.qtd);
+      carrinho.splice(i, 1);
+    }
+  }
+
+  salvarCarrinhoLocal();
+  atualizarCarrinho();
+}
+
 window.toggleCarrinho = function () {
   let c = document.getElementById("cartPanel");
   if (!c) return;
@@ -782,6 +807,7 @@ window.addProduto = async function(produtoId, selectId) {
     }
 
     atualizarCarrinho();
+    salvarCarrinhoLocal();
   } catch (erro) {
     console.error("Erro ao adicionar produto:", erro);
     alert("Produto sem estoque disponível.");
@@ -799,6 +825,7 @@ window.aumentar = async function(index) {
     item.tempo = Date.now();
 
     atualizarCarrinho();
+    salvarCarrinhoLocal();
   } catch (erro) {
     console.error("Erro ao aumentar item:", erro);
     alert("Produto sem estoque disponível.");
@@ -819,6 +846,7 @@ window.diminuir = async function(index) {
     }
 
     atualizarCarrinho();
+    salvarCarrinhoLocal();
   } catch (erro) {
     console.error("Erro ao diminuir item:", erro);
     alert("Erro ao devolver estoque.");
@@ -834,6 +862,7 @@ window.remover = async function(index) {
 
     carrinho.splice(index, 1);
     atualizarCarrinho();
+    salvarCarrinhoLocal();
   } catch (erro) {
     console.error("Erro ao remover item:", erro);
     alert("Erro ao devolver estoque.");
@@ -857,6 +886,7 @@ window.limparCarrinho = async function() {
     if (pedidoEl) pedidoEl.value = "";
 
     atualizarCarrinho();
+    salvarCarrinhoLocal();
   } catch (erro) {
     console.error("Erro ao limpar carrinho:", erro);
     alert("Erro ao devolver estoque.");
@@ -942,6 +972,7 @@ window.gerarPedido = async function () {
     alert("Pedido salvo no Firebase e copiado!");
 
     carrinho = [];
+    salvarCarrinhoLocal();
 
     // limpa os campos para não “grudar” a compra anterior
     let pagamentoSelect = document.getElementById("pagamento");
@@ -2104,10 +2135,11 @@ window.salvarAdmin = function () {
   alert("O estoque ainda não está online nesta etapa.");
 };
 
-window.onload = function () {
+window.onload = async function () {
   carregarDados();
   carregarProdutosFirebase();
   configurarEventosCarrinho();
+  await carregarCarrinhoLocal();
   atualizarCarrinho();
 };
 
