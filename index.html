@@ -369,6 +369,8 @@ const auth = getAuth(app);
 let carrinho = [];
 let produtos = [];
 let categoriaFiltroCliente = "todos";
+let unsubscribePedidosAdmin = null;
+let statusFiltroPedidosAtual = "todos";
 
 let configLoja = {
   descontoPix: 5,
@@ -391,22 +393,6 @@ onAuthStateChanged(auth, (user) => {
   }
 });
 
-function salvarProdutos(){
-localStorage.setItem("produtos", JSON.stringify(produtos))
-}
-
-// carregar produtos
-function carregarProdutos(){
-let dados = localStorage.getItem("produtos")
-if(dados){
-produtos = JSON.parse(dados)
-}
-}
-
-let estoques = {
-stock1: { Morango: 2, Melancia: 1 },
-stock2: { Roxo: 4, Rosa: 3 }
-}
 
 // 🔥 CARREGAR PRODUTOS DO FIREBASE
 function carregarProdutosFirebase() {
@@ -559,24 +545,6 @@ function mostrarEstoque(stockId) {
   div.innerHTML = qtdUnico <= 0
     ? `🔴 Esgotado`
     : `🟢 Disponível`;
-}
-
-function mostrarEstoqueOpcao(stockId, opcao){
-
-let div = document.getElementById(stockId)
-let dados = estoques[stockId]
-
-let qtd = dados[opcao] || 0
-
-let html = `<b>Estoque:</b><br><br>`
-
-if(qtd <= 0){
-html += `🔴 ${opcao}: Esgotado`
-}else{
-html += `🟢 ${opcao}: ${qtd}`
-}
-
-div.innerHTML = html
 }
 
 
@@ -1168,19 +1136,6 @@ async function limparReservas() {
     atualizarCarrinho();
   }
 }
-
-
-function salvarDados(){
-localStorage.setItem("estoques", JSON.stringify(estoques))
-}
-
-function carregarDados(){
-let dados = localStorage.getItem("estoques")
-if(dados){
-estoques = JSON.parse(dados)
-}
-}
-
 
 // ===== ADMIN OCULTO =====
 
@@ -1839,12 +1794,19 @@ window.renderSecaoPedidosAdmin = function () {
 };
 
 window.filtrarPedidosAdmin = function (statusFiltro = "todos") {
+  statusFiltroPedidosAtual = statusFiltro;
+
+  if (unsubscribePedidosAdmin) {
+    unsubscribePedidosAdmin();
+    unsubscribePedidosAdmin = null;
+  }
+
   const pedidosRef = query(
     collection(db, "Pedidos"),
     orderBy("criadoEm", "desc")
   );
 
-  onSnapshot(pedidosRef, (snapshot) => {
+    unsubscribePedidosAdmin = onSnapshot(pedidosRef, (snapshot) => {
     let lista = document.getElementById("listaPedidosAdmin");
     if (!lista) return;
 
@@ -2125,6 +2087,11 @@ window.removerProduto = async function (index) {
 };
 
 window.fecharAdmin = function () {
+  if (unsubscribePedidosAdmin) {
+    unsubscribePedidosAdmin();
+    unsubscribePedidosAdmin = null;
+  }
+
   if (window.painelAdmin) {
     window.painelAdmin.remove();
     window.painelAdmin = null;
@@ -2136,7 +2103,6 @@ window.salvarAdmin = function () {
 };
 
 window.onload = async function () {
-  carregarDados();
   carregarProdutosFirebase();
   configurarEventosCarrinho();
   await carregarCarrinhoLocal();
