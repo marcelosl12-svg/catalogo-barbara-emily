@@ -1120,7 +1120,7 @@ async function limparReservas() {
   for (let i = carrinho.length - 1; i >= 0; i--) {
     let item = carrinho[i];
 
-    if (agora - item.tempo > 300000) {
+    if (agora - item.tempo > tempoReserva) {
       await devolverEstoqueProduto(item.produtoId, item.opcao, item.qtd);
       carrinho.splice(i, 1);
       mudou = true;
@@ -1128,6 +1128,7 @@ async function limparReservas() {
   }
 
   if (mudou) {
+    salvarCarrinhoLocal();
     atualizarCarrinho();
   }
 }
