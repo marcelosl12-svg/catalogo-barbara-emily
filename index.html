@@ -587,7 +587,7 @@ async function carregarCarrinhoLocal() {
     let item = carrinho[i];
 
     if (agora - item.tempo > tempoReserva) {
-      await devolverEstoqueProduto(item.produtoId, item.opcao, item.qtd);
+      await expirarReserva(item);
       carrinho.splice(i, 1);
     }
   }
