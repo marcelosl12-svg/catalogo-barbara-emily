@@ -338,7 +338,8 @@ import {
   runTransaction,
   serverTimestamp,
   query,
-  orderBy
+  orderBy,
+  getDoc
 } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js";
 
 import {
@@ -758,14 +759,25 @@ window.addProduto = async function(produtoId, selectId) {
       item.qtd++;
       item.tempo = Date.now();
     } else {
+      let reservaRef = await addDoc(collection(db, "Reservas"), {
+        produtoId: produto.id,
+        nome: nomeFinal,
+        opcao: opcaoTexto,
+        qtd: 1,
+        status: "ativa",
+        criadoEmMs: Date.now(),
+        criadoEm: serverTimestamp()
+      });
+
       carrinho.push({
-       produtoId: produto.id,
-       nome: nomeFinal,         
-       preco: Number(produto.preco),
-       qtd: 1,
-       opcao: opcaoTexto,
-       promocao: produto.promocao || false,
-       tempo: Date.now()
+        produtoId: produto.id,
+        nome: nomeFinal,
+        preco: Number(produto.preco),
+        qtd: 1,
+        opcao: opcaoTexto,
+        promocao: produto.promocao || false,
+        tempo: Date.now(),
+        reservaId: reservaRef.id
       });
     }
 
@@ -1113,6 +1125,45 @@ function atualizarSelect(selectId, stockId) {
   }
 }
 
+async function expirarReserva(item) {
+  if (!item.reservaId) {
+    await devolverEstoqueProduto(item.produtoId, item.opcao, item.qtd);
+    return;
+  }
+
+  const reservaRef = doc(db, "Reservas", item.reservaId);
+  const produtoRef = doc(db, "Produtos", item.produtoId);
+
+  await runTransaction(db, async (transaction) => {
+    const reservaSnap = await transaction.get(reservaRef);
+    const produtoSnap = await transaction.get(produtoRef);
+
+    if (!reservaSnap.exists()) return;
+    if (!produtoSnap.exists()) return;
+
+    const reserva = reservaSnap.data();
+
+    if (reserva.status !== "ativa") {
+      return;
+    }
+
+    const produto = produtoSnap.data();
+    const estoque = produto.estoque || {};
+    const chaveEstoque = item.opcao || "unico";
+    const atual = Number(estoque[chaveEstoque] || 0);
+    const qtd = Number(item.qtd || 0);
+
+    transaction.update(produtoRef, {
+      [`estoque.${chaveEstoque}`]: atual + qtd
+    });
+
+    transaction.update(reservaRef, {
+      status: "expirada",
+      expiradoEmMs: Date.now()
+    });
+  });
+}
+
 async function limparReservas() {
   let agora = Date.now();
   let mudou = false;
@@ -1121,9 +1172,13 @@ async function limparReservas() {
     let item = carrinho[i];
 
     if (agora - item.tempo > tempoReserva) {
-      await devolverEstoqueProduto(item.produtoId, item.opcao, item.qtd);
-      carrinho.splice(i, 1);
-      mudou = true;
+      try {
+        await expirarReserva(item);
+        carrinho.splice(i, 1);
+        mudou = true;
+      } catch (erro) {
+        console.error("Erro ao expirar reserva:", erro);
+      }
     }
   }
 
