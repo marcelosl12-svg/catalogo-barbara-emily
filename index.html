@@ -325,6 +325,8 @@ Abrir Instagram
 
 <script type="module">
 
+  let reservasProcessando = new Set();
+
  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js";
 import {
   getFirestore,
@@ -742,12 +744,49 @@ window.addProduto = async function(produtoId, selectId) {
       alert("Selecione uma opção");
       return;
     }
-
     opcaoTexto = select.value;
   }
 
   try {
-    await baixarEstoqueProduto(produtoId, opcaoTexto, 1);
+    const produtoRef = doc(db, "Produtos", produtoId);
+    const reservasRef = collection(db, "Reservas");
+
+    let reservaId = null;
+
+    await runTransaction(db, async (transaction) => {
+      const produtoSnap = await transaction.get(produtoRef);
+      if (!produtoSnap.exists()) throw "Produto não existe";
+
+      const dados = produtoSnap.data();
+      const estoque = dados.estoque || {};
+
+      const chave = opcaoTexto || "unico";
+      const atual = Number(estoque[chave] || 0);
+
+      if (atual <= 0) {
+        throw "Sem estoque";
+      }
+
+      // 🔻 baixa estoque
+      transaction.update(produtoRef, {
+        [`estoque.${chave}`]: atual - 1
+      });
+
+      // 🔻 cria reserva DENTRO da transaction
+      const novaReservaRef = doc(reservasRef);
+
+      transaction.set(novaReservaRef, {
+        produtoId: produtoId,
+        nome: temOpcoes ? `${produto.nome} – ${opcaoTexto}` : produto.nome,
+        opcao: opcaoTexto,
+        qtd: 1,
+        status: "ativa",
+        criadoEmMs: Date.now(),
+        criadoEm: serverTimestamp()
+      });
+
+      reservaId = novaReservaRef.id;
+    });
 
     let nomeFinal = temOpcoes
       ? `${produto.nome} – ${opcaoTexto}`
@@ -759,16 +798,6 @@ window.addProduto = async function(produtoId, selectId) {
       item.qtd++;
       item.tempo = Date.now();
     } else {
-      let reservaRef = await addDoc(collection(db, "Reservas"), {
-        produtoId: produto.id,
-        nome: nomeFinal,
-        opcao: opcaoTexto,
-        qtd: 1,
-        status: "ativa",
-        criadoEmMs: Date.now(),
-        criadoEm: serverTimestamp()
-      });
-
       carrinho.push({
         produtoId: produto.id,
         nome: nomeFinal,
@@ -777,12 +806,13 @@ window.addProduto = async function(produtoId, selectId) {
         opcao: opcaoTexto,
         promocao: produto.promocao || false,
         tempo: Date.now(),
-        reservaId: reservaRef.id
+        reservaId: reservaId
       });
     }
 
     atualizarCarrinho();
     salvarCarrinhoLocal();
+
   } catch (erro) {
     console.error("Erro ao adicionar produto:", erro);
     alert("Produto sem estoque disponível.");
@@ -812,7 +842,7 @@ window.diminuir = async function(index) {
   if (!item) return;
 
   try {
-    await devolverEstoqueProduto(item.produtoId, item.opcao, 1);
+    await expirarReserva(item);
 
     item.qtd--;
 
@@ -833,7 +863,7 @@ window.remover = async function(index) {
   if (!item) return;
 
   try {
-    await devolverEstoqueProduto(item.produtoId, item.opcao, item.qtd);
+    await expirarReserva(item);
 
     carrinho.splice(index, 1);
     atualizarCarrinho();
@@ -847,7 +877,7 @@ window.remover = async function(index) {
 window.limparCarrinho = async function() {
   try {
     for (let item of carrinho) {
-      await devolverEstoqueProduto(item.produtoId, item.opcao, item.qtd);
+      await expirarReserva(item);
     }
 
     carrinho = [];
@@ -1127,9 +1157,9 @@ function atualizarSelect(selectId, stockId) {
 
 async function expirarReserva(item) {
   if (!item.reservaId) {
-    await devolverEstoqueProduto(item.produtoId, item.opcao, item.qtd);
-    return;
-  }
+  console.warn("Item ignorado (sem reservaId):", item);
+  return;
+}
 
   const reservaRef = doc(db, "Reservas", item.reservaId);
   const produtoRef = doc(db, "Produtos", item.produtoId);
@@ -1172,12 +1202,20 @@ async function limparReservas() {
     let item = carrinho[i];
 
     if (agora - item.tempo > tempoReserva) {
+
+      // 🔒 evita rodar duas vezes no mesmo item
+      if (reservasProcessando.has(item.reservaId)) continue;
+
+      reservasProcessando.add(item.reservaId);
+
       try {
         await expirarReserva(item);
         carrinho.splice(i, 1);
         mudou = true;
       } catch (erro) {
-        console.error("Erro ao expirar reserva:", erro);
+        console.error("Erro ao expirar:", erro);
+      } finally {
+        reservasProcessando.delete(item.reservaId);
       }
     }
   }
