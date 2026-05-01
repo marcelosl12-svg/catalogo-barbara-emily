@@ -410,14 +410,24 @@ function carregarProdutosFirebase() {
 });
 
     gerarProdutos();
-    renderFiltrosCategoriaCliente();
-    filtrarProdutosCliente();
 
-    produtos.forEach((p, index) => {
-      let id = index + 1;
-      mostrarEstoque("stock" + id);
-      atualizarSelect("op" + id, "stock" + id);
-    });
+      // ⏳ espera o DOM renderizar
+      setTimeout(() => {
+        produtos.forEach((p, index) => {
+          let id = index + 1;
+
+          if (document.getElementById("stock" + id)) {
+            mostrarEstoque("stock" + id);
+          }
+
+          if (document.getElementById("op" + id)) {
+            atualizarSelect("op" + id, "stock" + id);
+          }
+        });
+
+        renderFiltrosCategoriaCliente();
+        filtrarProdutosCliente();
+      }, 0);
   }, (erro) => {
     console.error("Erro ao ouvir produtos do Firebase:", erro);
     alert("Erro ao carregar produtos.");
@@ -429,61 +439,52 @@ function gerarProdutos() {
   container.innerHTML = "";
 
   produtos.forEach((p, index) => {
-    let idTela = index + 1;
-    let temOpcoes = Array.isArray(p.opcoes) && p.opcoes.length > 0;
+    try {
+      if (!p || !p.nome || p.preco == null) return;
 
-    let opcoesHTML = "";
-    if (temOpcoes) {
-      opcoesHTML = `<option value="">Opções</option>`;
-      p.opcoes.forEach(op => {
-        opcoesHTML += `<option value="${op}" data-img="${op}.jpg">${op}</option>`;
-      });
-    }
+      let idTela = index + 1;
+      let temOpcoes = Array.isArray(p.opcoes) && p.opcoes.length > 0;
 
-    container.innerHTML += `
-  <div class="card" data-nome="${p.nome.toLowerCase()}" data-categoria="${(p.categoria || 'sem categoria').toLowerCase()}" style="position:relative;">
-    ${p.promocao ? `
-      <div style="
-        position:absolute;
-        top:10px;
-        left:10px;
-        background:#8b0000;
-        color:#fff;
-        padding:6px 10px;
-        border-radius:999px;
-        font-size:12px;
-        font-weight:bold;
-        z-index:2;
-      ">
-        🔥 Promoção
-      </div>
-    ` : ""}
+      let opcoesHTML = "";
+      if (temOpcoes) {
+        opcoesHTML = `<option value="">Opções</option>`;
+        p.opcoes.forEach(op => {
+          opcoesHTML += `<option value="${op}" data-img="${op}.jpg">${op}</option>`;
+        });
+      }
 
-    <img id="img${idTela}" 
-      src="imagens/${p.pasta}/${p.imagem}"
-          onerror="this.onerror=null; this.src='imagens/sem-imagem.jpg'">
+      container.innerHTML += `
+        <div class="card"
+          data-nome="${(p.nome || "").toLowerCase()}"
+          data-categoria="${(p.categoria || 'sem categoria').toLowerCase()}">
 
-        <h3>${p.nome} - ${p.marca}</h3>
+          <img id="img${idTela}" 
+            src="imagens/${p.pasta || ""}/${p.imagem || ""}"
+            onerror="this.src='imagens/sem-imagem.jpg'">
 
-        <div class="price">R$ ${Number(p.preco).toFixed(2)}</div>
+          <h3>${p.nome || "Sem nome"} - ${p.marca || ""}</h3>
 
-        <div class="stock" id="stock${idTela}">
-          <b>${temOpcoes ? "Selecione uma opção" : ""}</b>
+          <div class="price">R$ ${Number(p.preco || 0).toFixed(2)}</div>
+
+          <div class="stock" id="stock${idTela}"></div>
+
+          ${
+            temOpcoes
+              ? `<select id="op${idTela}" onchange="trocarImagem('op${idTela}','img${idTela}','${p.pasta || ""}')">
+                  ${opcoesHTML}
+                </select>`
+              : ``
+          }
+
+          <button class="btn"
+            onclick="addProduto('${p.id}', ${temOpcoes ? `'op${idTela}'` : 'null'})">
+            Adicionar
+          </button>
         </div>
-
-        ${
-          temOpcoes
-            ? `<select id="op${idTela}" onchange="trocarImagem('op${idTela}','img${idTela}','${p.pasta}')">
-                ${opcoesHTML}
-              </select>`
-            : ``
-        }
-
-        <button class="btn" onclick="addProduto('${p.id}', ${temOpcoes ? `'op${idTela}'` : 'null'})">
-          Adicionar
-        </button>
-      </div>
-    `;
+      `;
+    } catch (erro) {
+      console.error("Erro ao renderizar produto:", p, erro);
+    }
   });
 }
 
@@ -514,29 +515,46 @@ window.trocarImagem = function (selectId, imgId, pasta) {
 
 
 function mostrarEstoque(stockId) {
-  let id = stockId.replace("stock", "");
-  let select = document.getElementById("op" + id);
-  let div = document.getElementById(stockId);
+    let id = stockId.replace("stock", "");
+    let select = document.getElementById("op" + id);
+    let div = document.getElementById(stockId);
 
-  let produto = produtos[id - 1];
-  if (!produto) return;
+    let produto = produtos[id - 1];
+    if (!produto) return;
 
-  let estoque = produto.estoque || {};
-  let temOpcoes = Array.isArray(produto.opcoes) && produto.opcoes.length > 0;
+    let estoque = produto.estoque;
+    let temOpcoes = Array.isArray(produto.opcoes) && produto.opcoes.length > 0;
 
-  if (temOpcoes) {
-    if (select && select.value) {
-      let opcao = select.value;
-      let qtd = Number(estoque[opcao] || 0);
-
-      div.innerHTML = qtd <= 0
-        ? `🔴 ${opcao}: Esgotado`
-        : `🟢 ${opcao}: Disponível`;
+    // 🔧 Se estoque for número (produto antigo)
+    if (typeof estoque === "number") {
+      div.innerHTML = estoque <= 0
+        ? `🔴 Esgotado`
+        : `🟢 Disponível`;
       return;
     }
 
-    div.innerHTML = `<b>Selecione uma opção</b>`;
-    return;
+    // 🔧 Produto com opções
+    if (temOpcoes) {
+      if (select && select.value) {
+        let opcao = select.value;
+        let qtd = Number(estoque[opcao] || 0);
+
+        div.innerHTML = qtd <= 0
+          ? `🔴 ${opcao}: Esgotado`
+          : `🟢 ${opcao}: Disponível`;
+        return;
+      }
+
+      div.innerHTML = `<b>Selecione uma opção</b>`;
+      return;
+    }
+
+    // 🔧 Produto simples com objeto
+    let qtdUnico = Number(estoque?.unico || 0);
+
+    div.innerHTML = qtdUnico <= 0
+      ? `🔴 Esgotado`
+      : `🟢 Disponível`;
   }
 
   let qtdUnico = Number(estoque.unico || 0);
@@ -2260,7 +2278,7 @@ window.migrarEstoque = async function () {
     console.error("Erro na migração:", erro);
   }
 };
- 
+
 </script>
 
 </body>
