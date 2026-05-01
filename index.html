@@ -515,49 +515,40 @@ window.trocarImagem = function (selectId, imgId, pasta) {
 
 
 function mostrarEstoque(stockId) {
-    let id = stockId.replace("stock", "");
-    let select = document.getElementById("op" + id);
-    let div = document.getElementById(stockId);
+  let id = stockId.replace("stock", "");
+  let select = document.getElementById("op" + id);
+  let div = document.getElementById(stockId);
 
-    let produto = produtos[id - 1];
-    if (!produto) return;
+  let produto = produtos[id - 1];
+  if (!produto) return;
 
-    let estoque = produto.estoque;
-    let temOpcoes = Array.isArray(produto.opcoes) && produto.opcoes.length > 0;
+  let estoque = produto.estoque;
+  let temOpcoes = Array.isArray(produto.opcoes) && produto.opcoes.length > 0;
 
-    // 🔧 Se estoque for número (produto antigo)
-    if (typeof estoque === "number") {
-      div.innerHTML = estoque <= 0
-        ? `🔴 Esgotado`
-        : `🟢 Disponível`;
-      return;
-    }
-
-    // 🔧 Produto com opções
-    if (temOpcoes) {
-      if (select && select.value) {
-        let opcao = select.value;
-        let qtd = Number(estoque[opcao] || 0);
-
-        div.innerHTML = qtd <= 0
-          ? `🔴 ${opcao}: Esgotado`
-          : `🟢 ${opcao}: Disponível`;
-        return;
-      }
-
-      div.innerHTML = `<b>Selecione uma opção</b>`;
-      return;
-    }
-
-    // 🔧 Produto simples com objeto
-    let qtdUnico = Number(estoque?.unico || 0);
-
-    div.innerHTML = qtdUnico <= 0
+  if (typeof estoque === "number") {
+    div.innerHTML = estoque <= 0
       ? `🔴 Esgotado`
       : `🟢 Disponível`;
+    return;
   }
 
-  let qtdUnico = Number(estoque.unico || 0);
+  if (temOpcoes) {
+    if (select && select.value) {
+      let opcao = select.value;
+      let qtd = Number(estoque[opcao] || 0);
+
+      div.innerHTML = qtd <= 0
+        ? `🔴 ${opcao}: Esgotado`
+        : `🟢 ${opcao}: Disponível`;
+      return;
+    }
+
+    div.innerHTML = `<b>Selecione uma opção</b>`;
+    return;
+  }
+
+  let qtdUnico = Number(estoque?.unico || 0);
+
   div.innerHTML = qtdUnico <= 0
     ? `🔴 Esgotado`
     : `🟢 Disponível`;
