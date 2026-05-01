@@ -758,19 +758,35 @@ window.addProduto = async function(produtoId, selectId) {
       if (!produtoSnap.exists()) throw "Produto não existe";
 
       const dados = produtoSnap.data();
-      const estoque = dados.estoque || {};
+      const estoque = dados.estoque;
 
-      const chave = opcaoTexto || "unico";
-      const atual = Number(estoque[chave] || 0);
+          let atual = 0;
+          let chave = opcaoTexto || "unico";
 
-      if (atual <= 0) {
-        throw "Sem estoque";
-      }
+          // 🔹 Produto simples (estoque é número)
+          if (typeof estoque === "number") {
+            atual = estoque;
+            chave = null;
+          }
+          // 🔹 Produto com variações (estoque é objeto)
+          else if (typeof estoque === "object") {
+            atual = Number(estoque[chave] || 0);
+          }
+
+          if (atual <= 0) {
+            throw "Sem estoque";
+          }
 
       // 🔻 baixa estoque
-      transaction.update(produtoRef, {
-        [`estoque.${chave}`]: atual - 1
-      });
+          if (chave === null) {
+            transaction.update(produtoRef, {
+              estoque: atual - 1
+            });
+          } else {
+            transaction.update(produtoRef, {
+              [`estoque.${chave}`]: atual - 1
+            });
+          }
 
       // 🔻 cria reserva DENTRO da transaction
       const novaReservaRef = doc(reservasRef);
