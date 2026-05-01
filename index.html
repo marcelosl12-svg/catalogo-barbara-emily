@@ -851,14 +851,16 @@ window.aumentar = async function(index) {
   try {
     await baixarEstoqueProduto(item.produtoId, item.opcao, 1);
 
+    // 🔥 cria NOVA reserva (não reutiliza antiga)
+    item.reservaId = null;
+
     item.qtd++;
     item.tempo = Date.now();
 
     atualizarCarrinho();
     salvarCarrinhoLocal();
   } catch (erro) {
-    console.error("Erro ao aumentar item:", erro);
-    alert("Produto sem estoque disponível.");
+    alert("Sem estoque");
   }
 };
 
@@ -1182,9 +1184,9 @@ function atualizarSelect(selectId, stockId) {
 
 async function expirarReserva(item) {
   if (!item.reservaId) {
-  console.warn("Item ignorado (sem reservaId):", item);
-  return;
-}
+    console.warn("Item sem reservaId:", item);
+    return;
+  }
 
   const reservaRef = doc(db, "Reservas", item.reservaId);
   const produtoRef = doc(db, "Produtos", item.produtoId);
@@ -1193,14 +1195,7 @@ async function expirarReserva(item) {
     const reservaSnap = await transaction.get(reservaRef);
     const produtoSnap = await transaction.get(produtoRef);
 
-    if (!reservaSnap.exists()) return;
     if (!produtoSnap.exists()) return;
-
-    const reserva = reservaSnap.data();
-
-    if (reserva.status !== "ativa") {
-      return;
-    }
 
     const produto = produtoSnap.data();
     const estoque = produto.estoque || {};
@@ -1208,14 +1203,18 @@ async function expirarReserva(item) {
     const atual = Number(estoque[chaveEstoque] || 0);
     const qtd = Number(item.qtd || 0);
 
+    // 🔥 SEMPRE devolve estoque (independente do status)
     transaction.update(produtoRef, {
       [`estoque.${chaveEstoque}`]: atual + qtd
     });
 
-    transaction.update(reservaRef, {
-      status: "expirada",
-      expiradoEmMs: Date.now()
-    });
+    // 🔥 Atualiza reserva se existir
+    if (reservaSnap.exists()) {
+      transaction.update(reservaRef, {
+        status: "expirada",
+        expiradoEmMs: Date.now()
+      });
+    }
   });
 }
 
