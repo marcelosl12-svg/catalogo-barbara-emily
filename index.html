@@ -2216,6 +2216,51 @@ window.onload = async function () {
 
 setInterval(limparReservas, 5000);
 
+window.migrarEstoque = async function () {
+  try {
+    const produtosRef = collection(db, "Produtos");
+    const snapshot = await getDocs(produtosRef);
+
+    let atualizados = 0;
+
+    for (let docSnap of snapshot.docs) {
+      const data = docSnap.data();
+      const estoque = data.estoque;
+
+      // 🔹 Se já for objeto, pula
+      if (typeof estoque === "object" && estoque !== null) continue;
+
+      // 🔹 Se for número, converte
+      if (typeof estoque === "number") {
+        await updateDoc(doc(db, "Produtos", docSnap.id), {
+          estoque: {
+            unico: estoque
+          }
+        });
+
+        console.log(`Convertido: ${data.nome}`);
+        atualizados++;
+      }
+
+      // 🔹 Se estiver vazio/null
+      if (!estoque) {
+        await updateDoc(doc(db, "Produtos", docSnap.id), {
+          estoque: {
+            unico: 0
+          }
+        });
+
+        console.log(`Corrigido vazio: ${data.nome}`);
+        atualizados++;
+      }
+    }
+
+    alert(`Migração concluída! ${atualizados} produtos atualizados.`);
+  } catch (erro) {
+    console.error("Erro na migração:", erro);
+  }
+};
+ 
 </script>
 
 </body>
