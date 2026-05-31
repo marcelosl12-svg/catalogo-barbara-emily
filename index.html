@@ -249,9 +249,9 @@ font-weight:bold;
 <body>
 
 <header>
- <div class="logoArea">
-<img src="imagens/00/Logo.jpg" class="logo">
-<b class="titulo">Catálogo Bárbara Emily</b>
+<div class="logoArea">
+  <img src="imagens/00/Logo.jpg" class="logo" id="logoLoja">
+  <b class="titulo">Catálogo Bárbara Emily</b>
 </div>
 
 
@@ -1471,6 +1471,36 @@ document.addEventListener("keydown", function(e) {
     }
   }
 });
+
+let timerLogo;
+
+const logo = document.getElementById("logoLoja");
+
+if (logo) {
+
+  logo.addEventListener("touchstart", () => {
+
+    timerLogo = setTimeout(() => {
+
+      if (adminLogado) {
+        window.abrirAdmin();
+      } else {
+        window.loginAdmin();
+      }
+
+    }, 3000);
+
+  });
+
+  logo.addEventListener("touchend", () => {
+    clearTimeout(timerLogo);
+  });
+
+  logo.addEventListener("touchcancel", () => {
+    clearTimeout(timerLogo);
+  });
+
+}
 
 window.abrirAdmin = function () {
   let painel = document.createElement("div");
