@@ -1472,15 +1472,19 @@ document.addEventListener("keydown", function(e) {
   }
 });
 
-let timerLogo;
+let contadorCliquesLogo = 0;
 
 const logo = document.getElementById("logoLoja");
 
 if (logo) {
 
-  logo.addEventListener("touchstart", () => {
+  logo.addEventListener("click", () => {
 
-    timerLogo = setTimeout(() => {
+    contadorCliquesLogo++;
+
+    if (contadorCliquesLogo >= 5) {
+
+      contadorCliquesLogo = 0;
 
       if (adminLogado) {
         window.abrirAdmin();
@@ -1488,16 +1492,12 @@ if (logo) {
         window.loginAdmin();
       }
 
+    }
+
+    setTimeout(() => {
+      contadorCliquesLogo = 0;
     }, 3000);
 
-  });
-
-  logo.addEventListener("touchend", () => {
-    clearTimeout(timerLogo);
-  });
-
-  logo.addEventListener("touchcancel", () => {
-    clearTimeout(timerLogo);
   });
 
 }
