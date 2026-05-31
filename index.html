@@ -292,12 +292,19 @@ font-weight:bold;
 
 <p class="totalBox">Total: R$ <span id="total">0.00</span></p>
 
-<select id="pagamento">
-  <option value="">Forma de pagamento</option>
-  <option value="Dinheiro">Dinheiro</option>
-  <option value="PIX">PIX</option>
-  <option value="Cartao">Cartão</option>
-</select>
+<input
+  type="text"
+  id="nomeCliente"
+  placeholder="Nome completo"
+  style="width:100%; margin-top:8px; padding:8px; border-radius:6px; border:1px solid #ccc;"
+>
+
+<input
+  type="tel"
+  id="contatoCliente"
+  placeholder="(85) 99999-9999"
+  style="width:100%; margin-top:8px; padding:8px; border-radius:6px; border:1px solid #ccc;"
+>
 
 <select id="entrega">
   <option value="">Opções de entrega</option>
@@ -305,14 +312,19 @@ font-weight:bold;
   <option value="0">Via Uber flash (por conta do cliente)</option>
 </select>
 
+<select id="pagamento">
+  <option value="">Forma de pagamento</option>
+  <option id="opcaoDinheiro" value="Dinheiro">Dinheiro</option>
+  <option value="PIX">PIX</option>
+  <option value="Cartao">Cartão</option>
+</select>
+
 <div id="lista"></div>
 
-<button class="btn" onclick="gerarPedido()">Gerar pedido</button>
 <button class="btn" onclick="limparCarrinho()">Limpar</button>
 
-<button class="instagramBtn"
-onclick="window.open('https://ig.me/m/barbaraemilybe','_blank')">
-Abrir Instagram
+<button class="btn" onclick="finalizarPedido()">
+📲 Finalizar Pedido
 </button>
 
 <textarea id="pedido"></textarea>
@@ -643,6 +655,36 @@ async function baixarEstoqueProduto(produtoId, opcao, quantidade = 1) {
   });
 }
 
+window.atualizarFormasPagamento = function () {
+  let entrega = document.getElementById("entrega");
+  let pagamento = document.getElementById("pagamento");
+  let opcaoDinheiro = document.getElementById("opcaoDinheiro");
+
+  if (!entrega || !pagamento || !opcaoDinheiro) return;
+
+  let textoEntrega =
+    entrega.options[entrega.selectedIndex]?.text || "";
+
+  let entregaDomicilio =
+    textoEntrega.toLowerCase().includes("uber");
+
+  if (entregaDomicilio) {
+
+    opcaoDinheiro.style.display = "none";
+
+    if (pagamento.value === "Dinheiro") {
+      pagamento.value = "";
+    }
+
+  } else {
+
+    opcaoDinheiro.style.display = "block";
+
+  }
+
+  atualizarCarrinho();
+};
+
 function atualizarCarrinho() {
   let lista = document.getElementById("lista");
   let pagamentoSelect = document.getElementById("pagamento");
@@ -735,8 +777,8 @@ function configurarEventosCarrinho() {
   }
 
   if (entregaSelect) {
-    entregaSelect.addEventListener("change", atualizarCarrinho);
-    entregaSelect.addEventListener("input", atualizarCarrinho);
+    entregaSelect.addEventListener("change", atualizarFormasPagamento);
+    entregaSelect.addEventListener("input", atualizarFormasPagamento);
   }
 }
 
@@ -917,6 +959,9 @@ window.limparCarrinho = async function() {
     if (entregaSelect) entregaSelect.selectedIndex = 0;
     if (pedidoEl) pedidoEl.value = "";
 
+    document.getElementById("nomeCliente").value = "";
+    document.getElementById("contatoCliente").value = "";
+
     atualizarCarrinho();
     salvarCarrinhoLocal();
   } catch (erro) {
@@ -926,8 +971,22 @@ window.limparCarrinho = async function() {
 };
 
 window.gerarPedido = async function () {
+
   if (carrinho.length === 0) {
     alert("Carrinho vazio");
+    return;
+  }
+
+  let nomeCliente = document.getElementById("nomeCliente").value.trim();
+  let contatoCliente = document.getElementById("contatoCliente").value.trim();
+
+  if (!nomeCliente) {
+    alert("Informe seu nome.");
+    return;
+  }
+
+  if (!contatoCliente) {
+    alert("Informe seu contato.");
     return;
   }
 
@@ -947,6 +1006,9 @@ window.gerarPedido = async function () {
   }
 
   let texto = "Pedido\n\n";
+    texto += `Cliente: ${nomeCliente}\n`;
+    texto += `Contato: ${contatoCliente}\n\n`;
+
   let subtotal = 0;
   let subtotalElegivelPix = 0;
 
@@ -995,7 +1057,9 @@ window.gerarPedido = async function () {
       desconto,
       total,
       pagamento,
-      entregaTexto
+      entregaTexto,
+      nomeCliente,
+      contatoCliente
     );
 
     document.getElementById("pedido").value = texto;
@@ -1022,7 +1086,150 @@ window.gerarPedido = async function () {
   }
 };
 
-async function salvarPedidoFirebaseComDesconto(subtotal, subtotalElegivelPix, taxa, desconto, total, pagamento, entregaTexto) {
+window.finalizarPedido = async function () {
+
+  if (carrinho.length === 0) {
+    alert("Carrinho vazio");
+    return;
+  }
+
+  let nomeCliente = document.getElementById("nomeCliente").value.trim();
+  let contatoCliente = document.getElementById("contatoCliente").value.trim();
+
+  if (!nomeCliente) {
+    alert("Informe seu nome.");
+    return;
+  }
+
+  if (!contatoCliente) {
+    alert("Informe seu contato.");
+    return;
+  }
+
+  let pagamento = document.getElementById("pagamento").value;
+
+  if (!pagamento) {
+    alert("Selecione a forma de pagamento.");
+    return;
+  }
+
+  let entregaSelect = document.getElementById("entrega");
+
+  if (entregaSelect.selectedIndex === 0) {
+    alert("Selecione a opção de entrega.");
+    return;
+  }
+
+  let entregaTexto =
+    entregaSelect.options[entregaSelect.selectedIndex].text;
+
+  let taxa = parseFloat(entregaSelect.value || 0);
+
+  let texto = "*NOVO PEDIDO*\n\n";
+
+  texto += `Cliente: ${nomeCliente}\n`;
+  texto += `Contato: ${contatoCliente}\n`;
+  texto += `Entrega: ${entregaTexto}\n`;
+  texto += `Pagamento: ${pagamento}\n\n`;
+
+  texto += "ITENS\n\n";
+
+  let subtotal = 0;
+  let subtotalElegivelPix = 0;
+
+  carrinho.forEach(item => {
+
+    let sub = item.preco * item.qtd;
+
+    subtotal += sub;
+
+    if (!item.promocao) {
+      subtotalElegivelPix += sub;
+    }
+
+    texto += `• ${item.nome}\n`;
+    texto += `${item.qtd}x R$ ${item.preco.toFixed(2)}\n\n`;
+  });
+
+  let desconto = 0;
+
+  let minimoPix = Number(configLoja.minimoPix || 0);
+  let descontoPix = Number(configLoja.descontoPix || 0);
+
+  if (
+    pagamento.toLowerCase() === "pix" &&
+    subtotalElegivelPix >= minimoPix
+  ) {
+    desconto =
+      subtotalElegivelPix *
+      (descontoPix / 100);
+  }
+
+  let total = subtotal + taxa - desconto;
+
+  texto += `Subtotal: R$ ${subtotal.toFixed(2)}\n`;
+
+  if (desconto > 0) {
+    texto += `Desconto PIX: -R$ ${desconto.toFixed(2)}\n`;
+  }
+
+  texto += `Total: R$ ${total.toFixed(2)}\n`;
+
+  try {
+
+    await salvarPedidoFirebaseComDesconto(
+      subtotal,
+      subtotalElegivelPix,
+      taxa,
+      desconto,
+      total,
+      pagamento,
+      entregaTexto,
+      nomeCliente,
+      contatoCliente
+    );
+
+    const numeroLoja = "5585999999999"; // TROCAR
+
+    const linkWhatsapp =
+      `https://wa.me/${numeroLoja}?text=${encodeURIComponent(texto)}`;
+
+    //window.open(linkWhatsapp, "_blank");
+
+      // Limpa os campos do cliente
+      document.getElementById("nomeCliente").value = "";
+      document.getElementById("contatoCliente").value = "";
+
+      // Volta os selects para o padrão
+      document.getElementById("pagamento").selectedIndex = 0;
+      document.getElementById("entrega").selectedIndex = 0;
+
+      // Limpa o carrinho
+      carrinho = [];
+
+      salvarCarrinhoLocal();
+      atualizarCarrinho();
+
+  } catch (erro) {
+
+    console.error(erro);
+
+    alert("Erro ao finalizar pedido.");
+  }
+};
+
+async function salvarPedidoFirebaseComDesconto(
+  subtotal,
+  subtotalElegivelPix,
+  taxa,
+  desconto,
+  total,
+  pagamento,
+  entregaTexto,
+  nomeCliente,
+  contatoCliente
+) { 
+  
   let itens = carrinho.map(item => ({
     produtoId: item.produtoId,
     nome: item.nome,
@@ -1033,6 +1240,9 @@ async function salvarPedidoFirebaseComDesconto(subtotal, subtotalElegivelPix, ta
   }));
 
   await addDoc(collection(db, "Pedidos"), {
+    nomeCliente,
+    contatoCliente,
+
     itens,
     pagamento,
     entrega: entregaTexto,
@@ -2001,6 +2211,9 @@ window.filtrarPedidosAdmin = function (statusFiltro = "todos") {
           </div><br>
 
           <b>Data:</b> ${dataPedido}<br>
+          <b>Data:</b> ${dataPedido}<br>
+          <b>Cliente:</b> ${p.nomeCliente || "-"}<br>
+          <b>Contato:</b> ${p.contatoCliente || "-"}<br>
           <b>Pagamento:</b> ${p.pagamento || "-"}<br>
           <b>Entrega:</b> ${p.entrega || "-"}<br>
           <b>Total:</b> R$ ${Number(p.total || 0).toFixed(2)}<br><br>
