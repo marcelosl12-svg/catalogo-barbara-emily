@@ -46,6 +46,23 @@ line-height:1.5;
 margin-top:5px;
 }
 
+#bannerAviso{
+  display:none;
+  width:100%;
+  padding:12px;
+  text-align:center;
+  font-weight:bold;
+  box-sizing:border-box;
+  animation: piscarBanner 2s infinite;
+}
+
+@keyframes piscarBanner{
+  0%{opacity:1;}
+  50%{opacity:.8;}
+  100%{opacity:1;}
+}
+
+
 .cartBtn{
 position:fixed;
 top:18px;
@@ -249,19 +266,22 @@ font-weight:bold;
 <body>
 
 <header>
-<div class="logoArea">
-  <img src="imagens/00/Logo.jpg" class="logo" id="logoLoja">
-  <b class="titulo">Catálogo Bárbara Emily</b>
-</div>
-
+  <div class="logoArea">
+    <img src="imagens/00/Logo.jpg" class="logo" id="logoLoja">
+    <b class="titulo">Catálogo Bárbara Emily</b>
+  </div>
 
   <button class="cartBtn" onclick="toggleCarrinho()">
-🛒
-<span id="cartBadge">0</span>
-</button>
-
+    🛒
+    <span id="cartBadge">0</span>
+  </button>
 </header>
 
+<div id="bannerAviso"></div>
+
+<div id="bannerAviso" class="banner-aviso" style="display:none;">
+  <span id="textoBanner"></span>
+</div>
 
 <!-- PRODUTOS AUTOMÁTICOS -->
 
@@ -327,7 +347,19 @@ font-weight:bold;
 📲 Finalizar Pedido
 </button>
 
-<textarea id="pedido"></textarea>
+<textarea
+  id="observacoesPedido"
+  placeholder="Observações do pedido (opcional)"
+  rows="4"
+  style="
+    width:100%;
+    margin-top:10px;
+    padding:10px;
+    border:1px solid #ccc;
+    border-radius:8px;
+    resize:vertical;
+  "
+></textarea>
 
 </div>
 
@@ -353,7 +385,8 @@ import {
   serverTimestamp,
   query,
   orderBy,
-  getDoc
+  getDoc,
+  setDoc
 } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js";
 
 import {
@@ -384,7 +417,14 @@ let statusFiltroPedidosAtual = "todos";
 
 let configLoja = {
   descontoPix: 5,
-  minimoPix: 50
+  minimoPix: 50,
+
+  bannerAviso: {
+    ativo: true,
+    texto: "",
+    corFundo: "#FFD700",
+    corTexto: "#000000"
+  }
 };
 
 // 🔐 login admin
@@ -403,6 +443,23 @@ onAuthStateChanged(auth, (user) => {
   }
 });
 
+
+
+async function carregarConfigLoja() {
+
+  const ref = doc(db, "Configuracoes", "Loja");
+
+  const snap = await getDoc(ref);
+
+  if (!snap.exists()) return;
+
+  configLoja = {
+    ...configLoja,
+    ...snap.data()
+  };
+
+  atualizarBannerAviso();
+}
 
 // 🔥 CARREGAR PRODUTOS DO FIREBASE
 function carregarProdutosFirebase() {
@@ -498,6 +555,27 @@ function gerarProdutos() {
       console.error("Erro ao renderizar produto:", p, erro);
     }
   });
+}
+
+function atualizarBannerAviso() {
+
+  const banner = document.getElementById("bannerAviso");
+
+  if (
+    !configLoja.bannerAviso ||
+    !configLoja.bannerAviso.ativo
+  ) {
+    banner.style.display = "none";
+    return;
+  }
+
+  banner.style.display = "block";
+  banner.innerHTML = configLoja.bannerAviso.texto;
+  banner.style.backgroundColor =
+    configLoja.bannerAviso.corFundo;
+
+  banner.style.color =
+    configLoja.bannerAviso.corTexto;
 }
 
 window.trocarImagem = function (selectId, imgId, pasta) {
@@ -961,6 +1039,7 @@ window.limparCarrinho = async function() {
 
     document.getElementById("nomeCliente").value = "";
     document.getElementById("contatoCliente").value = "";
+    document.getElementById("observacoesPedido").value = "";
 
     atualizarCarrinho();
     salvarCarrinhoLocal();
@@ -1036,6 +1115,10 @@ window.gerarPedido = async function () {
 
   let total = subtotal + taxa - desconto;
 
+  if (observacoes) {
+    texto += `OBSERVAÇÕES\n${observacoes}\n\n`;
+  }
+
   texto += `Subtotal: R$ ${subtotal.toFixed(2)}\n`;
   texto += `Entrega: ${entregaTexto}\n`;
   texto += `Taxa: R$ ${taxa.toFixed(2)}\n`;
@@ -1095,6 +1178,7 @@ window.finalizarPedido = async function () {
 
   let nomeCliente = document.getElementById("nomeCliente").value.trim();
   let contatoCliente = document.getElementById("contatoCliente").value.trim();
+  let observacoes = document.getElementById("observacoesPedido").value.trim();
 
   if (!nomeCliente) {
     alert("Informe seu nome.");
@@ -1199,6 +1283,7 @@ window.finalizarPedido = async function () {
       // Limpa os campos do cliente
       document.getElementById("nomeCliente").value = "";
       document.getElementById("contatoCliente").value = "";
+      document.getElementById("observacoesPedido").value = "";
 
       // Volta os selects para o padrão
       document.getElementById("pagamento").selectedIndex = 0;
@@ -1634,6 +1719,8 @@ window.renderDashboardAdmin = function () {
       margin-bottom:16px;
       background:#fafafa;
     ">
+
+      
       <h3 style="margin-top:0;">Configurações da loja</h3>
       <label>
         Desconto no PIX (%):
@@ -1644,6 +1731,31 @@ window.renderDashboardAdmin = function () {
         Valor mínimo para desconto PIX:
         <input type="number" id="minimoPixAdmin" value="${configLoja.minimoPix}" style="width:100%; margin-top:6px;">
       </label>
+
+      <label>
+        <input type="checkbox" id="bannerAtivo">
+        Ativar aviso
+      </label>
+
+      <label>
+        Texto do aviso
+      </label>
+
+      <textarea
+        id="bannerTexto"
+        rows="3"
+        placeholder="Digite o aviso">
+      </textarea>
+
+      <br><br>
+
+      <label>Cor de fundo</label>
+      <input type="color" id="bannerCorFundo">
+
+      <br><br>
+
+      <label>Cor do texto</label>
+      <input type="color" id="bannerCorTexto">
 
       <div style="margin-top:10px;">
         <button onclick="salvarConfigLoja()">Salvar configuração</button>
@@ -1662,17 +1774,39 @@ window.renderDashboardAdmin = function () {
   `;
 
   window.dashboardVendas("total");
+
+  document.getElementById("bannerAtivo").checked =
+  configLoja.bannerAviso?.ativo || false;
+
+  document.getElementById("bannerTexto").value =
+    configLoja.bannerAviso?.texto || "";
+
+  document.getElementById("bannerCorFundo").value =
+    configLoja.bannerAviso?.corFundo || "#FFD700";
+
+  document.getElementById("bannerCorTexto").value =
+    configLoja.bannerAviso?.corTexto || "#000000";
+
 };
 
 window.salvarConfigLoja = function () {
+
   let desconto = parseFloat(document.getElementById("descontoPixAdmin")?.value || 0);
   let minimo = parseFloat(document.getElementById("minimoPixAdmin")?.value || 0);
 
   configLoja.descontoPix = isNaN(desconto) ? 0 : desconto;
   configLoja.minimoPix = isNaN(minimo) ? 0 : minimo;
 
+  configLoja.bannerAviso = {
+    ativo: document.getElementById("bannerAtivo").checked,
+    texto: document.getElementById("bannerTexto").value,
+    corFundo: document.getElementById("bannerCorFundo").value,
+    corTexto: document.getElementById("bannerCorTexto").value
+  };
+
+  atualizarBannerAviso();
+
   alert("Configuração salva!");
-  atualizarCarrinho();
 };
 
 window.dashboardVendas = function () {
@@ -2459,10 +2593,18 @@ window.salvarAdmin = function () {
 };
 
 window.onload = async function () {
+
+  await carregarConfigLoja();
+
   carregarProdutosFirebase();
+
   configurarEventosCarrinho();
+
   await carregarCarrinhoLocal();
+
   atualizarCarrinho();
+
+  atualizarBannerAviso();
 };
 
 setInterval(limparReservas, 5000);
