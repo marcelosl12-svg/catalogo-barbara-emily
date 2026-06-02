@@ -53,7 +53,6 @@ margin-top:5px;
   text-align:center;
   font-weight:bold;
   box-sizing:border-box;
-  animation: piscarBanner 2s infinite;
 }
 
 @keyframes piscarBanner{
@@ -62,6 +61,24 @@ margin-top:5px;
   100%{opacity:1;}
 }
 
+@keyframes pulsarTexto {
+  0% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.05);
+  }
+
+  100% {
+    transform: scale(1);
+  }
+}
+
+.bannerTextoPulsando {
+  display: inline-block;
+  animation: pulsarTexto 1.2s infinite;
+}
 
 .cartBtn{
 position:fixed;
@@ -372,6 +389,7 @@ font-weight:bold;
   let reservasProcessando = new Set();
 
  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js";
+
 import {
   getFirestore,
   collection,
@@ -423,7 +441,8 @@ let configLoja = {
     ativo: true,
     texto: "",
     corFundo: "#FFD700",
-    corTexto: "#000000"
+    corTexto: "#000000",
+    pulsar: true
   }
 };
 
@@ -448,7 +467,6 @@ onAuthStateChanged(auth, (user) => {
 async function carregarConfigLoja() {
 
   const ref = doc(db, "Configuracoes", "Loja");
-
   const snap = await getDoc(ref);
 
   if (!snap.exists()) return;
@@ -457,6 +475,21 @@ async function carregarConfigLoja() {
     ...configLoja,
     ...snap.data()
   };
+
+  if (document.getElementById("bannerAtivo")) {
+
+    document.getElementById("bannerAtivo").checked =
+      configLoja.bannerAviso?.ativo || false;
+
+    document.getElementById("bannerTexto").value =
+      configLoja.bannerAviso?.texto || "";
+
+    document.getElementById("bannerCorFundo").value =
+      configLoja.bannerAviso?.corFundo || "#FFD700";
+
+    document.getElementById("bannerCorTexto").value =
+      configLoja.bannerAviso?.corTexto || "#000000";
+  }
 
   atualizarBannerAviso();
 }
@@ -570,12 +603,29 @@ function atualizarBannerAviso() {
   }
 
   banner.style.display = "block";
-  banner.innerHTML = configLoja.bannerAviso.texto;
+
   banner.style.backgroundColor =
     configLoja.bannerAviso.corFundo;
 
   banner.style.color =
     configLoja.bannerAviso.corTexto;
+
+  const textoFormatado =
+    configLoja.bannerAviso.texto.replace(/\n/g, "<br>");
+
+  if (configLoja.bannerAviso.pulsar) {
+
+    banner.innerHTML = `
+      <span class="bannerTextoPulsando">
+        ${textoFormatado}
+      </span>
+    `;
+
+  } else {
+
+    banner.innerHTML = textoFormatado;
+
+  }
 }
 
 window.trocarImagem = function (selectId, imgId, pasta) {
@@ -1355,35 +1405,62 @@ window.abrirPedidosAdmin = function () {
     orderBy("criadoEm", "desc")
   );
 
-  onSnapshot(pedidosRef, (snapshot) => {
-    let lista = document.getElementById("listaPedidosAdmin");
-    if (!lista) return;
+  snapshot.forEach(docSnap => {
 
-    let pedidosHTML = "";
+    let pedido = docSnap.data();
 
-    snapshot.forEach((docSnap, index) => {
-      let p = docSnap.data();
+    if (pedido.status !== "entregue") {
+      pedidosPendentes++;
+      return;
+    }
 
-      let itens = p.itens.map(i =>
-        `${i.nome} (${i.qtd}x)`
-      ).join("<br>");
+    if (!pedido.criadoEm) return;
 
-      pedidosHTML += `
-        <div style="border:1px solid #ccc; padding:10px; margin:10px 0;">
-          <b>Status:</b> ${p.status}<br>
-          <b>Pagamento:</b> ${p.pagamento}<br>
-          <b>Entrega:</b> ${p.entrega}<br>
-          <b>Total:</b> R$ ${p.total.toFixed(2)}<br>
-          <b>Itens:</b><br>${itens}<br><br>
+    let dataPedido = pedido.criadoEm.toDate();
 
-          <button onclick="concluirPedido('${docSnap.id}')">
-            ✅ Concluir
-          </button>
-        </div>
-      `;
+    let incluir = true;
+
+    if (periodo === "hoje") {
+
+      incluir =
+        dataPedido.getDate() === agora.getDate() &&
+        dataPedido.getMonth() === agora.getMonth() &&
+        dataPedido.getFullYear() === agora.getFullYear();
+
+    } else if (periodo === "7dias") {
+
+      let limite = new Date();
+      limite.setDate(limite.getDate() - 7);
+
+      incluir = dataPedido >= limite;
+
+    } else if (periodo === "30dias") {
+
+      let limite = new Date();
+      limite.setDate(limite.getDate() - 30);
+
+      incluir = dataPedido >= limite;
+    }
+
+    if (!incluir) return;
+
+    totalPedidos++;
+    faturamento += Number(pedido.total || 0);
+
+    let itensPedido = Array.isArray(pedido.itens)
+      ? pedido.itens
+      : [];
+
+    itensPedido.forEach(item => {
+
+      let nome = item.nome || "Produto";
+
+      let qtd = Number(item.qtd || 0);
+
+      produtosVendidos[nome] =
+        (produtosVendidos[nome] || 0) + qtd;
     });
 
-    lista.innerHTML = pedidosHTML || "Nenhum pedido";
   });
 };
 
@@ -1734,11 +1811,12 @@ window.renderDashboardAdmin = function () {
 
       <label>
         <input type="checkbox" id="bannerAtivo">
-        Ativar aviso
+        Ativar banner
       </label>
 
-      <label>
-        Texto do aviso
+      <label style="display:block;margin-top:10px;">
+        <input type="checkbox" id="bannerPulsar">
+        Texto pulsando
       </label>
 
       <textarea
@@ -1775,6 +1853,9 @@ window.renderDashboardAdmin = function () {
 
   window.dashboardVendas("total");
 
+  document.getElementById("bannerPulsar").checked =
+  configLoja.bannerAviso?.pulsar ?? true;
+
   document.getElementById("bannerAtivo").checked =
   configLoja.bannerAviso?.ativo || false;
 
@@ -1789,48 +1870,128 @@ window.renderDashboardAdmin = function () {
 
 };
 
-window.salvarConfigLoja = function () {
+window.salvarConfigLoja = async function () {
 
-  let desconto = parseFloat(document.getElementById("descontoPixAdmin")?.value || 0);
-  let minimo = parseFloat(document.getElementById("minimoPixAdmin")?.value || 0);
+  try {
 
-  configLoja.descontoPix = isNaN(desconto) ? 0 : desconto;
-  configLoja.minimoPix = isNaN(minimo) ? 0 : minimo;
+    console.log("CLICOU EM SALVAR");
 
-  configLoja.bannerAviso = {
-    ativo: document.getElementById("bannerAtivo").checked,
-    texto: document.getElementById("bannerTexto").value,
-    corFundo: document.getElementById("bannerCorFundo").value,
-    corTexto: document.getElementById("bannerCorTexto").value
-  };
+    let desconto = parseFloat(
+      document.getElementById("descontoPixAdmin")?.value || 0
+    );
 
-  atualizarBannerAviso();
+    let minimo = parseFloat(
+      document.getElementById("minimoPixAdmin")?.value || 0
+    );
 
-  alert("Configuração salva!");
+    configLoja.descontoPix = isNaN(desconto) ? 0 : desconto;
+    configLoja.minimoPix = isNaN(minimo) ? 0 : minimo;
+
+    configLoja.bannerAviso = {
+      ativo: document.getElementById("bannerAtivo").checked,
+      texto: document.getElementById("bannerTexto").value,
+      corFundo: document.getElementById("bannerCorFundo").value,
+      corTexto: document.getElementById("bannerCorTexto").value,
+      pulsar: document.getElementById("bannerPulsar").checked
+    };
+
+    console.log("DADOS:", configLoja);
+
+    await setDoc(
+      doc(db, "Configuracoes", "Loja"),
+      configLoja,
+      { merge: true }
+    );
+
+    console.log("SALVOU NO FIREBASE");
+
+    atualizarBannerAviso();
+
+    alert("Configuração salva!");
+
+  } catch (erro) {
+
+    console.error("ERRO AO SALVAR:", erro);
+
+    alert("Erro ao salvar. Veja o console.");
+  }
 };
 
-window.dashboardVendas = function () {
+window.dashboardVendas = function (periodo = "total") {
+
   const pedidosRef = collection(db, "Pedidos");
 
   onSnapshot(pedidosRef, (snapshot) => {
+
     let totalPedidos = 0;
     let faturamento = 0;
     let produtosVendidos = {};
+    let pedidosPendentes = 0;
+
+    const agora = new Date();
 
     snapshot.forEach(docSnap => {
+
       let pedido = docSnap.data();
+
+      if (pedido.status !== "entregue") {
+        pedidosPendentes++;
+        return;
+      }
+
+      if (!pedido.criadoEm) return;
+
+      let dataPedido;
+
+      if (pedido.criadoEm.toDate) {
+        dataPedido = pedido.criadoEm.toDate();
+      } else {
+        dataPedido = new Date(pedido.criadoEm);
+      }
+
+      let incluir = true;
+
+      if (periodo === "hoje") {
+
+        incluir =
+          dataPedido.getDate() === agora.getDate() &&
+          dataPedido.getMonth() === agora.getMonth() &&
+          dataPedido.getFullYear() === agora.getFullYear();
+
+      } else if (periodo === "7dias") {
+
+        let limite = new Date();
+        limite.setDate(limite.getDate() - 7);
+
+        incluir = dataPedido >= limite;
+
+      } else if (periodo === "30dias") {
+
+        let limite = new Date();
+        limite.setDate(limite.getDate() - 30);
+
+        incluir = dataPedido >= limite;
+      }
+
+      if (!incluir) return;
 
       totalPedidos++;
       faturamento += Number(pedido.total || 0);
 
-      let itensPedido = Array.isArray(pedido.itens) ? pedido.itens : [];
+      let itensPedido = Array.isArray(pedido.itens)
+        ? pedido.itens
+        : [];
 
       itensPedido.forEach(item => {
-        let nome = item.nome || "Produto sem nome";
+
+        let nome = item.nome || "Produto";
+
         let qtd = Number(item.qtd || 0);
 
-        produtosVendidos[nome] = (produtosVendidos[nome] || 0) + qtd;
+        produtosVendidos[nome] =
+          (produtosVendidos[nome] || 0) + qtd;
       });
+
     });
 
     let ranking = Object.entries(produtosVendidos)
@@ -1839,55 +2000,61 @@ window.dashboardVendas = function () {
 
     let rankingHTML = ranking.length
       ? ranking.map((item, index) => `
-          <p style="margin:6px 0;">
-            ${index + 1}º 🏆 ${item[0]} — ${item[1]} vendas
-          </p>
-        `).join("")
-      : "<p>Nenhuma venda ainda</p>";
+        <p style="margin:6px 0;">
+          ${index + 1}º 🏆 ${item[0]} — ${item[1]} vendas
+        </p>
+      `).join("")
+      : "<p>Nenhuma venda encontrada</p>";
+
+    let graficoHTML = ranking.map(item => {
+
+      let largura = item[1] * 20;
+
+      return `
+        <div style="margin:10px 0;">
+          <div style="font-size:14px;margin-bottom:4px;">
+            ${item[0]} (${item[1]})
+          </div>
+
+          <div style="
+            height:22px;
+            width:${largura}px;
+            background:linear-gradient(90deg,#7c3aed,#c084fc);
+            border-radius:6px;
+          "></div>
+        </div>
+      `;
+
+    }).join("");
 
     let box = document.getElementById("dashboardVendas");
+
     if (!box) return;
 
-    let graficoHTML = Object.entries(produtosVendidos)
-  .sort((a, b) => b[1] - a[1])
-  .slice(0, 5)
-  .map(item => {
-    let largura = item[1] * 20;
+    box.innerHTML = `
+      <h2>📊 Dashboard (${periodo})</h2>
 
-    return `
-      <div style="margin:10px 0;">
-        <div style="font-size:14px; margin-bottom:4px;">
-          ${item[0]} (${item[1]})
-        </div>
-        <div style="
-          height:22px;
-          width:${largura}px;
-          background:linear-gradient(90deg,#7c3aed,#c084fc);
-          border-radius:6px;
-        "></div>
-      </div>
+      <p>📦 Pedidos: ${totalPedidos}</p>
+
+      <p>⏳ Pedidos Pendentes: ${pedidosPendentes}</p>
+
+      <p>💰 Faturamento: R$ ${faturamento.toFixed(2)}</p>
+
+      <h3 style="margin-top:20px;">
+        🏆 Top 5 Produtos
+      </h3>
+
+      ${rankingHTML}
+
+      <h3 style="margin-top:24px;">
+        📈 Gráfico de vendas
+      </h3>
+
+      ${graficoHTML || "<p>Sem dados</p>"}
     `;
-  }).join("");
 
-box.innerHTML = `
-  <h2>📊 Dashboard</h2>
-  <p>📦 Pedidos: ${totalPedidos}</p>
-  <p>💰 Faturamento: R$ ${faturamento.toFixed(2)}</p>
-
-  <h3 style="margin-top:20px;">🏆 Top 5 Produtos</h3>
-  ${rankingHTML}
-
-  <h3 style="margin-top:24px;">📈 Gráfico de vendas</h3>
-  ${graficoHTML || "<p>Sem dados</p>"}
-`;
-  }, (erro) => {
-    console.error("Erro no dashboard:", erro);
-
-    let box = document.getElementById("dashboardVendas");
-    if (box) {
-      box.innerHTML = `<p>Erro ao carregar dashboard.</p>`;
-    }
   });
+
 };
 
 
@@ -1900,7 +2067,10 @@ window.exportarRelatorioCSV = async function () {
     ];
 
     snapshot.forEach(docSnap => {
+
       let pedido = docSnap.data();
+
+      if (pedido.status !== "entregue") return;
 
       let data = pedido.criadoEm?.toDate
         ? pedido.criadoEm.toDate().toLocaleString("pt-BR")
