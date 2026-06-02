@@ -2442,12 +2442,64 @@ window.renderSecaoPedidosAdmin = function () {
       <button onclick="filtrarPedidosAdmin('pronto')">Prontos</button>
       <button onclick="filtrarPedidosAdmin('entregue')">Entregues</button>
       <button onclick="filtrarPedidosAdmin('cancelado')">Cancelados</button>
+
+      <button
+        onclick="apagarPedidosCancelados()"
+        style="
+          background:#dc2626;
+          color:white;
+          border:none;
+          padding:8px 12px;
+          border-radius:8px;
+          cursor:pointer;
+        "
+      >
+        🗑️ Limpar Cancelados
+      </button>
     </div>
 
     <div id="listaPedidosAdmin">Carregando...</div>
   `;
 
   window.filtrarPedidosAdmin("todos");
+};
+
+window.apagarPedidosCancelados = async function () {
+
+  if (!confirm("Deseja apagar todos os pedidos cancelados?")) {
+    return;
+  }
+
+  try {
+
+    const snapshot = await getDocs(
+      collection(db, "Pedidos")
+    );
+
+    let apagados = 0;
+
+    for (const docSnap of snapshot.docs) {
+
+      const pedido = docSnap.data();
+
+      if (pedido.status === "cancelado") {
+
+        await deleteDoc(
+          doc(db, "Pedidos", docSnap.id)
+        );
+
+        apagados++;
+      }
+    }
+
+    alert(`${apagados} pedidos cancelados removidos.`);
+
+  } catch (erro) {
+
+    console.error(erro);
+    alert("Erro ao apagar pedidos.");
+
+  }
 };
 
 window.filtrarPedidosAdmin = function (statusFiltro = "todos") {
