@@ -1108,6 +1108,7 @@ window.gerarPedido = async function () {
 
   let nomeCliente = document.getElementById("nomeCliente").value.trim();
   let contatoCliente = document.getElementById("contatoCliente").value.trim();
+  let observacoes = document.getElementById("observacoesPedido").value.trim();
 
   if (!nomeCliente) {
     alert("Informe seu nome.");
@@ -1265,6 +1266,9 @@ window.finalizarPedido = async function () {
   texto += `Contato: ${contatoCliente}\n`;
   texto += `Entrega: ${entregaTexto}\n`;
   texto += `Pagamento: ${pagamento}\n\n`;
+  if (observacoes) {
+    texto += `Obs: ${observacoes}\n\n`;
+  }
 
   texto += "ITENS\n\n";
 
@@ -1320,15 +1324,16 @@ window.finalizarPedido = async function () {
       pagamento,
       entregaTexto,
       nomeCliente,
-      contatoCliente
+      contatoCliente,
+      observacoes
     );
 
-    const numeroLoja = "5585999999999"; // TROCAR
+    const numeroLoja = "5585987128621"; // TROCAR
 
     const linkWhatsapp =
       `https://wa.me/${numeroLoja}?text=${encodeURIComponent(texto)}`;
 
-    //window.open(linkWhatsapp, "_blank");
+    window.open(linkWhatsapp, "_blank");
 
       // Limpa os campos do cliente
       document.getElementById("nomeCliente").value = "";
@@ -1353,17 +1358,19 @@ window.finalizarPedido = async function () {
   }
 };
 
-async function salvarPedidoFirebaseComDesconto(
-  subtotal,
-  subtotalElegivelPix,
-  taxa,
-  desconto,
-  total,
-  pagamento,
-  entregaTexto,
-  nomeCliente,
-  contatoCliente
-) { 
+  async function salvarPedidoFirebaseComDesconto(
+    subtotal,
+    subtotalElegivelPix,
+    taxa,
+    desconto,
+    total,
+    pagamento,
+    entregaTexto,
+    nomeCliente,
+    contatoCliente,
+    observacoes
+  )
+ { 
   
   let itens = carrinho.map(item => ({
     produtoId: item.produtoId,
@@ -1377,7 +1384,7 @@ async function salvarPedidoFirebaseComDesconto(
   await addDoc(collection(db, "Pedidos"), {
     nomeCliente,
     contatoCliente,
-
+    observacoes,
     itens,
     pagamento,
     entrega: entregaTexto,
