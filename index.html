@@ -437,12 +437,13 @@ let configLoja = {
   descontoPix: 5,
   minimoPix: 50,
 
+  liveAtiva: false,
+
   bannerAviso: {
     ativo: true,
     texto: "",
     corFundo: "#FFD700",
-    corTexto: "#000000",
-    pulsar: true
+    corTexto: "#000000"
   }
 };
 
@@ -489,6 +490,11 @@ async function carregarConfigLoja() {
 
     document.getElementById("bannerCorTexto").value =
       configLoja.bannerAviso?.corTexto || "#000000";
+  }
+
+  if (document.getElementById("liveAtivaAdmin")) {
+    document.getElementById("liveAtivaAdmin").checked =
+      configLoja.liveAtiva || false;
   }
 
   atualizarBannerAviso();
@@ -555,6 +561,35 @@ function gerarProdutos() {
         });
       }
 
+      let precoExibido = Number(p.preco || 0);
+      let htmlPreco = `R$ ${precoExibido.toFixed(2)}`;
+
+      if (
+        configLoja.liveAtiva &&
+        p.liveAtivo &&
+        Number(p.precoLive) > 0
+      ) {
+        precoExibido = Number(p.precoLive);
+
+        htmlPreco = `
+          <div style="
+            text-decoration:line-through;
+            color:#999;
+            font-size:14px;
+          ">
+            R$ ${Number(p.preco).toFixed(2)}
+          </div>
+
+          <div style="
+            color:#e60023;
+            font-weight:bold;
+            font-size:22px;
+          ">
+            🔴 LIVE R$ ${precoExibido.toFixed(2)}
+          </div>
+        `;
+      }
+
       container.innerHTML += `
         <div class="card"
           data-nome="${(p.nome || "").toLowerCase()}"
@@ -566,7 +601,9 @@ function gerarProdutos() {
 
           <h3>${p.nome || "Sem nome"} - ${p.marca || ""}</h3>
 
-          <div class="price">R$ ${Number(p.preco || 0).toFixed(2)}</div>
+          <div class="price">
+            ${htmlPreco}
+          </div>
 
           <div class="stock" id="stock${idTela}"></div>
 
@@ -993,10 +1030,22 @@ window.addProduto = async function(produtoId, selectId) {
       item.qtd++;
       item.tempo = Date.now();
     } else {
+
+
+      let precoFinal = Number(produto.preco);
+
+      if (
+        configLoja.liveAtiva &&
+        produto.liveAtivo &&
+        Number(produto.precoLive) > 0
+      ) {
+        precoFinal = Number(produto.precoLive);
+      }
+
       carrinho.push({
         produtoId: produto.id,
         nome: nomeFinal,
-        preco: Number(produto.preco),
+        preco: precoFinal,
         qtd: 1,
         opcao: opcaoTexto,
         promocao: produto.promocao || false,
@@ -1806,6 +1855,12 @@ window.renderDashboardAdmin = function () {
 
       
       <h3 style="margin-top:0;">Configurações da loja</h3>
+
+      <label style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">
+        <input type="checkbox" id="liveAtivaAdmin">
+        🔴 Live acontecendo agora
+      </label>
+
       <label>
         Desconto no PIX (%):
         <input type="number" id="descontoPixAdmin" value="${configLoja.descontoPix}" style="width:100%; margin-top:6px;">
@@ -1869,6 +1924,9 @@ window.renderDashboardAdmin = function () {
   document.getElementById("bannerTexto").value =
     configLoja.bannerAviso?.texto || "";
 
+  document.getElementById("liveAtivaAdmin").checked =
+    configLoja.liveAtiva || false;
+
   document.getElementById("bannerCorFundo").value =
     configLoja.bannerAviso?.corFundo || "#FFD700";
 
@@ -1890,6 +1948,9 @@ window.salvarConfigLoja = async function () {
     let minimo = parseFloat(
       document.getElementById("minimoPixAdmin")?.value || 0
     );
+
+    configLoja.liveAtiva =
+      document.getElementById("liveAtivaAdmin").checked;
 
     configLoja.descontoPix = isNaN(desconto) ? 0 : desconto;
     configLoja.minimoPix = isNaN(minimo) ? 0 : minimo;
@@ -1913,6 +1974,8 @@ window.salvarConfigLoja = async function () {
     console.log("SALVOU NO FIREBASE");
 
     atualizarBannerAviso();
+
+    gerarProdutos();
 
     alert("Configuração salva!");
 
@@ -2348,7 +2411,24 @@ window.renderSecaoProdutosAdmin = function () {
           </label>
 
           Preço:<br>
-          <input type="number" id="p_preco_${index}" value="${p.preco}" style="width:100%; margin-bottom:8px;"><br>
+            <input type="number" id="p_preco_${index}" value="${p.preco}" style="width:100%; margin-bottom:8px;"><br>
+
+            <label style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+              <input
+                type="checkbox"
+                id="p_live_${index}"
+                ${p.liveAtivo ? "checked" : ""}
+              >
+              Participa da Live
+            </label>
+
+            Preço da Live:<br>
+            <input
+              type="number"
+              id="p_precoLive_${index}"
+              value="${p.precoLive || 0}"
+              style="width:100%; margin-bottom:8px;"
+            ><br>
 
           Ordem:<br>
           <input type="number" id="p_ordem_${index}" value="${p.ordem ?? 999}" style="width:100%; margin-bottom:8px;"><br>
@@ -2699,6 +2779,10 @@ window.criarProduto = async function () {
     categoria,
     promocao,
     preco,
+
+    liveAtivo: false,
+    precoLive: 0,
+
     ordem: 999,
     pasta,
     imagem,
@@ -2727,6 +2811,13 @@ window.salvarEdicaoProdutos = async function () {
       let marca = document.getElementById(`p_marca_${index}`)?.value.trim() || "";
       let categoria = document.getElementById(`p_categoria_${index}`)?.value.trim() || "";
       let promocao = document.getElementById(`p_promocao_${index}`)?.checked || false;
+      let liveAtivo =
+        document.getElementById(`p_live_${index}`)?.checked || false;
+
+      let precoLive =
+        parseFloat(
+          document.getElementById(`p_precoLive_${index}`)?.value || 0
+        );
       let preco = parseFloat(document.getElementById(`p_preco_${index}`)?.value || 0);
       let ordem = parseInt(document.getElementById(`p_ordem_${index}`)?.value || 999);
       let pasta = document.getElementById(`p_pasta_${index}`)?.value.trim() || "";
@@ -2758,12 +2849,16 @@ window.salvarEdicaoProdutos = async function () {
         categoria,
         promocao,
         preco,
+
+        liveAtivo,
+        precoLive,
+
         ordem,
         pasta,
         imagem,
         opcoes: novasOpcoes,
         estoque: novoEstoque
-    };
+      };
     });
 
     // 3) Agora salva tudo
@@ -2774,6 +2869,10 @@ window.salvarEdicaoProdutos = async function () {
         categoria: item.categoria,
         promocao: item.promocao,
         preco: item.preco,
+
+        liveAtivo: item.liveAtivo,
+        precoLive: item.precoLive,
+
         ordem: item.ordem,
         pasta: item.pasta,
         imagem: item.imagem,
