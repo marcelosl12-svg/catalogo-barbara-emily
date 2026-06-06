@@ -524,6 +524,8 @@ function carregarProdutosFirebase() {
         produtos.forEach((p, index) => {
           let id = index + 1;
 
+          if (p.ativo === false) return;
+          
           if (document.getElementById("stock" + id)) {
             mostrarEstoque("stock" + id);
           }
@@ -547,6 +549,9 @@ function gerarProdutos() {
   container.innerHTML = "";
 
   produtos.forEach((p, index) => {
+
+    if (p.ativo === false) return;
+
     try {
       if (!p || !p.nome || p.preco == null) return;
 
@@ -2386,7 +2391,33 @@ window.renderSecaoProdutosAdmin = function () {
           background:#fafafa;
         " onclick="toggleProdutoAdmin(${index})">
           <div>
-            <b style="font-size:17px;">🧴 ${p.nome}</b><br>
+            <b style="font-size:17px;">
+          🧴 ${p.nome}
+
+          ${
+            p.ativo !== false
+              ? `<span style="
+                  background:#16a34a;
+                  color:white;
+                  padding:2px 8px;
+                  border-radius:20px;
+                  font-size:11px;
+                  margin-left:6px;
+                ">
+                  ATIVO
+                </span>`
+              : `<span style="
+                  background:#dc2626;
+                  color:white;
+                  padding:2px 8px;
+                  border-radius:20px;
+                  font-size:11px;
+                  margin-left:6px;
+                ">
+                  OCULTO
+                </span>`
+          }
+        </b><br>
             <span style="color:#666; font-size:14px;">
               ${p.marca} • ${p.categoria || "Sem categoria"} • R$ ${Number(p.preco).toFixed(2)} • Ordem ${p.ordem ?? 999}
             </span>
@@ -2408,6 +2439,15 @@ window.renderSecaoProdutosAdmin = function () {
           <label style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
             <input type="checkbox" id="p_promocao_${index}" ${p.promocao ? "checked" : ""}>
             Produto em promoção
+          </label>
+
+          <label style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+            <input
+              type="checkbox"
+              id="p_ativo_${index}"
+              ${p.ativo !== false ? "checked" : ""}
+            >
+            Produto visível no catálogo
           </label>
 
           Preço:<br>
@@ -2779,10 +2819,9 @@ window.criarProduto = async function () {
     categoria,
     promocao,
     preco,
-
+    ativo: true,
     liveAtivo: false,
     precoLive: 0,
-
     ordem: 999,
     pasta,
     imagem,
@@ -2811,6 +2850,8 @@ window.salvarEdicaoProdutos = async function () {
       let marca = document.getElementById(`p_marca_${index}`)?.value.trim() || "";
       let categoria = document.getElementById(`p_categoria_${index}`)?.value.trim() || "";
       let promocao = document.getElementById(`p_promocao_${index}`)?.checked || false;
+      let ativo =
+        document.getElementById(`p_ativo_${index}`)?.checked ?? true;
       let liveAtivo =
         document.getElementById(`p_live_${index}`)?.checked || false;
 
@@ -2848,11 +2889,10 @@ window.salvarEdicaoProdutos = async function () {
         marca,
         categoria,
         promocao,
+        ativo,
         preco,
-
         liveAtivo,
         precoLive,
-
         ordem,
         pasta,
         imagem,
@@ -2868,11 +2908,10 @@ window.salvarEdicaoProdutos = async function () {
         marca: item.marca,
         categoria: item.categoria,
         promocao: item.promocao,
+        ativo: item.ativo,
         preco: item.preco,
-
         liveAtivo: item.liveAtivo,
         precoLive: item.precoLive,
-
         ordem: item.ordem,
         pasta: item.pasta,
         imagem: item.imagem,
