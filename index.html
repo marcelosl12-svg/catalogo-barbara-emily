@@ -437,7 +437,12 @@ let configLoja = {
   descontoPix: 5,
   minimoPix: 50,
 
-  liveAtiva: false,
+  taxasEntrega: {
+    "Centro": 5,
+    "Aldeota": 8,
+    "Meireles": 10,
+    "Papicu": 12
+  },
 
   bannerAviso: {
     ativo: true,
@@ -490,6 +495,21 @@ async function carregarConfigLoja() {
 
     document.getElementById("bannerCorTexto").value =
       configLoja.bannerAviso?.corTexto || "#000000";
+
+      if (document.getElementById("taxasEntregaAdmin")) {
+
+        let texto = "";
+
+        Object.entries(configLoja.taxasEntrega || {})
+          .forEach(([bairro, valor]) => {
+
+            texto += `${bairro}=${valor}\n`;
+
+          });
+
+        document.getElementById("taxasEntregaAdmin").value = texto;
+      }
+
   }
 
   if (document.getElementById("liveAtivaAdmin")) {
@@ -671,7 +691,31 @@ function atualizarBannerAviso() {
 }
 
 window.trocarImagem = function (selectId, imgId, pasta) {
-  let select = document.getElementById(selectId);
+
+  const select = document.getElementById(selectId);
+
+    if (!select.value) {
+
+  const numero = parseInt(selectId.replace("op", ""));
+
+  const produto = produtos[numero - 1];
+
+      if (produto) {
+        document.getElementById(imgId).src =
+          `imagens/${produto.pasta}/${produto.imagem}`;
+      }
+
+      const stockId = imgId.replace("img", "stock");
+
+      const stock = document.getElementById(stockId);
+
+      if (stock) {
+        stock.innerHTML = "Selecione uma opção";
+      }
+
+      return;
+    }
+
   let img = document.getElementById(imgId);
 
   if (!select) return;
@@ -1061,6 +1105,31 @@ window.addProduto = async function(produtoId, selectId) {
 
     atualizarCarrinho();
     salvarCarrinhoLocal();
+
+    if (selectId) {
+
+    const select = document.getElementById(selectId);
+
+    if (select) {
+      select.selectedIndex = 0;
+
+      const numero = selectId.replace("op", "");
+
+      const stock = document.getElementById("stock" + numero);
+
+      if (stock) {
+        stock.innerHTML = "Selecione uma opção";
+      }
+
+      const img = document.getElementById("img" + numero);
+
+      const produto = produtos.find(p => p.id === produtoId);
+
+      if (img && produto) {
+        img.src = `imagens/${produto.pasta}/${produto.imagem}`;
+      }
+    }
+  }
 
   } catch (erro) {
     console.error("Erro ao adicionar produto:", erro);
@@ -1861,6 +1930,15 @@ window.renderDashboardAdmin = function () {
       
       <h3 style="margin-top:0;">Configurações da loja</h3>
 
+      <h3>Taxas de Entrega</h3>
+
+      <textarea
+        id="taxasEntregaAdmin"
+        rows="6"
+        style="width:100%;"
+        placeholder="Centro=5&#10;Aldeota=8&#10;Meireles=10"
+      ></textarea>
+
       <label style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">
         <input type="checkbox" id="liveAtivaAdmin">
         🔴 Ligar live
@@ -1937,6 +2015,20 @@ window.renderDashboardAdmin = function () {
 
   document.getElementById("bannerCorTexto").value =
     configLoja.bannerAviso?.corTexto || "#000000";
+
+    if (document.getElementById("taxasEntregaAdmin")) {
+
+      let texto = "";
+
+      Object.entries(configLoja.taxasEntrega || {})
+        .forEach(([bairro, valor]) => {
+
+          texto += `${bairro}=${valor}\n`;
+
+        });
+
+      document.getElementById("taxasEntregaAdmin").value = texto;
+    }
 
 };
 
