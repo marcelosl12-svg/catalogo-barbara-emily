@@ -2479,6 +2479,20 @@ window.renderSecaoProdutosAdmin = function () {
           Imagem:<br>
           <input id="p_imagem_${index}" value="${p.imagem}" style="width:100%; margin-bottom:8px;"><br>
 
+          <div style="margin-top:8px;">
+          <img
+            src="imagens/${p.pasta}/${p.imagem}"
+            style="
+              width:80px;
+              height:80px;
+              object-fit:contain;
+              border:1px solid #ddd;
+              border-radius:8px;
+            "
+            onerror="this.src='imagens/sem-imagem.jpg'"
+          >
+        </div>
+
           Opções:<br>
           <input id="p_opcoes_${index}" value="${p.opcoes.join(",")}" style="width:100%; margin-bottom:8px;"><br>
 
