@@ -1573,13 +1573,17 @@ window.finalizarPedido = async function () {
 
   let total = subtotal + taxa - desconto;
 
-  texto += `Subtotal: R$ ${subtotal.toFixed(2)}\n`;
+      texto += `Subtotal: R$ ${subtotal.toFixed(2)}\n`;
 
-  if (desconto > 0) {
-    texto += `Desconto PIX: -R$ ${desconto.toFixed(2)}\n`;
-  }
+      if (taxa > 0) {
+        texto += `Taxa de entrega: R$ ${taxa.toFixed(2)}\n`;
+      }
 
-  texto += `Total: R$ ${total.toFixed(2)}\n`;
+      if (desconto > 0) {
+        texto += `Desconto PIX: -R$ ${desconto.toFixed(2)}\n`;
+      }
+
+      texto += `Total: R$ ${total.toFixed(2)}\n`;
 
   try {
 
