@@ -361,12 +361,23 @@ font-weight:bold;
 
 <div id="areaBairroEntrega" style="display:none; margin-top:8px;">
 
-  <select
-    id="bairroEntrega"
-    onchange="atualizarTaxaBairro()"
-  >
+  <select id="bairroEntrega" onchange="atualizarTaxaBairro()">
     <option value="">Selecione seu bairro</option>
   </select>
+
+  <textarea
+    id="enderecoEntrega"
+    placeholder="Rua, número, complemento e ponto de referência"
+    style="
+      width:100%;
+      margin-top:8px;
+      padding:10px;
+      border:1px solid #ccc;
+      border-radius:8px;
+      resize:vertical;
+    "
+    rows="3"
+  ></textarea>
 
 </div>
 
@@ -1452,7 +1463,8 @@ if (entregaSelect.value === "loja") {
       pagamento,
       entregaTexto,
       nomeCliente,
-      contatoCliente
+      contatoCliente,
+      enderecoEntrega
     );
 
     document.getElementById("pedido").value = texto;
@@ -1517,6 +1529,29 @@ window.finalizarPedido = async function () {
   let entregaTexto =
     entregaSelect.options[entregaSelect.selectedIndex].text;
 
+    let enderecoEntrega = "";
+
+    if (entregaSelect.value === "loja") {
+
+      const bairro =
+        document.getElementById("bairroEntrega").value;
+
+      enderecoEntrega =
+        document.getElementById("enderecoEntrega")
+          .value
+          .trim();
+
+      if (!bairro) {
+        alert("Selecione seu bairro.");
+        return;
+      }
+
+      if (!enderecoEntrega) {
+        alert("Informe o endereço para entrega.");
+        return;
+      }
+    }
+
   let taxa = 0;
 
     if (entregaSelect.value === "loja") {
@@ -1533,6 +1568,12 @@ window.finalizarPedido = async function () {
   texto += `Cliente: ${nomeCliente}\n`;
   texto += `Contato: ${contatoCliente}\n`;
   texto += `Entrega: ${entregaTexto}\n`;
+  if (entregaSelect.value === "loja") {
+
+    texto += `Bairro: ${document.getElementById("bairroEntrega").value}\n`;
+
+    texto += `Endereço: ${enderecoEntrega}\n`;
+  }
   texto += `Pagamento: ${pagamento}\n\n`;
   if (observacoes) {
     texto += `Obs: ${observacoes}\n\n`;
@@ -1597,7 +1638,8 @@ window.finalizarPedido = async function () {
       entregaTexto,
       nomeCliente,
       contatoCliente,
-      observacoes
+      observacoes,
+      enderecoEntrega
     );
 
     const numeroLoja = "5585987128621"; // TROCAR
@@ -1655,7 +1697,8 @@ window.finalizarPedido = async function () {
     entregaTexto,
     nomeCliente,
     contatoCliente,
-    observacoes
+    observacoes,
+    enderecoEntrega
   )
  { 
   
@@ -1672,6 +1715,7 @@ window.finalizarPedido = async function () {
     nomeCliente,
     contatoCliente,
     observacoes,
+    enderecoEntrega,
     itens,
     pagamento,
     entrega: entregaTexto,
