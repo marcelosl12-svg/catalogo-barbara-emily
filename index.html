@@ -343,11 +343,32 @@ font-weight:bold;
   style="width:100%; margin-top:8px; padding:8px; border-radius:6px; border:1px solid #ccc;"
 >
 
-<select id="entrega">
+<select id="entrega" onchange="mostrarBairrosEntrega()">
   <option value="">Opções de entrega</option>
-  <option value="0">Retirar na loja</option>
-  <option value="0">Via Uber flash (por conta do cliente)</option>
+
+  <option value="retirada">
+    Retirar na loja
+  </option>
+
+  <option value="uber">
+    Via Uber flash (por conta do cliente)
+  </option>
+
+  <option value="loja">
+    Entrega pela loja
+  </option>
 </select>
+
+<div id="areaBairroEntrega" style="display:none; margin-top:8px;">
+
+  <select
+    id="bairroEntrega"
+    onchange="atualizarTaxaBairro()"
+  >
+    <option value="">Selecione seu bairro</option>
+  </select>
+
+</div>
 
 <select id="pagamento">
   <option value="">Forma de pagamento</option>
@@ -429,6 +450,7 @@ const auth = getAuth(app);
 
 let carrinho = [];
 let produtos = [];
+let taxaEntregaBairro = 0;
 let categoriaFiltroCliente = "todos";
 let unsubscribePedidosAdmin = null;
 let statusFiltroPedidosAtual = "todos";
@@ -652,6 +674,43 @@ function gerarProdutos() {
   });
 }
 
+window.mostrarBairrosEntrega = function() {
+
+  const entrega =
+    document.getElementById("entrega").value;
+
+  const area =
+    document.getElementById("areaBairroEntrega");
+
+  if (!area) return;
+
+  if (entrega === "loja") {
+
+    area.style.display = "block";
+
+    carregarBairrosEntrega();
+
+  } else {
+
+    area.style.display = "none";
+  }
+};
+
+window.alterarTipoEntrega = function() {
+
+  const entrega =
+    document.getElementById("entrega").value;
+
+  const area =
+    document.getElementById("areaBairro");
+
+  if (entrega === "loja") {
+    area.style.display = "block";
+  } else {
+    area.style.display = "none";
+  }
+}
+
 function atualizarBannerAviso() {
 
   const banner = document.getElementById("bannerAviso");
@@ -688,6 +747,38 @@ function atualizarBannerAviso() {
     banner.innerHTML = textoFormatado;
 
   }
+}
+
+window.carregarBairrosEntrega = function() {
+
+  const select =
+    document.getElementById("bairroEntrega");
+
+  if (!select) return;
+
+  select.innerHTML =
+    '<option value="">Selecione seu bairro</option>';
+
+  Object.entries(configLoja.taxasEntrega || {})
+    .forEach(([bairro, taxa]) => {
+
+      select.innerHTML += `
+        <option value="${bairro}">
+          ${bairro} - R$ ${Number(taxa).toFixed(2)}
+        </option>
+      `;
+    });
+}
+
+window.atualizarTaxaBairro = function() {
+
+  const bairro =
+    document.getElementById("bairroEntrega").value;
+
+  taxaEntregaBairro =
+    Number(configLoja.taxasEntrega?.[bairro] || 0);
+
+  atualizarCarrinho();
 }
 
 window.trocarImagem = function (selectId, imgId, pasta) {
@@ -941,7 +1032,17 @@ function atualizarCarrinho() {
     `;
   });
 
-  let taxa = parseFloat(entregaSelect.value || 0);
+  let taxa = 0;
+
+if (entregaSelect.value === "loja") {
+
+  taxa = taxaEntregaBairro;
+
+} else {
+
+  taxa = parseFloat(entregaSelect.value || 0);
+}
+
 let pagamento = String(pagamentoSelect.value || "").trim();
 
 let desconto = 0;
@@ -1214,6 +1315,21 @@ window.limparCarrinho = async function() {
     document.getElementById("contatoCliente").value = "";
     document.getElementById("observacoesPedido").value = "";
 
+    const bairro = document.getElementById("bairroEntrega");
+
+      if (bairro) {
+        bairro.selectedIndex = 0;
+      }
+
+      const areaBairro =
+        document.getElementById("areaBairroEntrega");
+
+      if (areaBairro) {
+        areaBairro.style.display = "none";
+      }
+
+      taxaEntregaBairro = 0;
+
     atualizarCarrinho();
     salvarCarrinhoLocal();
   } catch (erro) {
@@ -1246,7 +1362,27 @@ window.gerarPedido = async function () {
   let pagamento = document.getElementById("pagamento").value;
   let entregaSelect = document.getElementById("entrega");
   let entregaTexto = entregaSelect.options[entregaSelect.selectedIndex].text;
-  let taxa = parseFloat(entregaSelect.value || 0);
+  
+  let taxa = 0;
+
+if (entregaSelect.value === "loja") {
+
+  const bairro =
+    document.getElementById("bairroEntrega").value;
+
+  if (!bairro) {
+    alert("Selecione seu bairro.");
+    return;
+  }
+
+  taxa =
+    Number(configLoja.taxasEntrega?.[bairro] || 0);
+
+} else {
+
+  taxa =
+    parseFloat(entregaSelect.value || 0);
+}
 
   if (!pagamento) {
     alert("Selecione a forma de pagamento.");
@@ -1381,7 +1517,16 @@ window.finalizarPedido = async function () {
   let entregaTexto =
     entregaSelect.options[entregaSelect.selectedIndex].text;
 
-  let taxa = parseFloat(entregaSelect.value || 0);
+  let taxa = 0;
+
+    if (entregaSelect.value === "loja") {
+
+      const bairro =
+        document.getElementById("bairroEntrega").value;
+
+      taxa =
+        Number(configLoja.taxasEntrega?.[bairro] || 0);
+    }
 
   let texto = "*NOVO PEDIDO*\n\n";
 
@@ -1466,6 +1611,21 @@ window.finalizarPedido = async function () {
       // Volta os selects para o padrão
       document.getElementById("pagamento").selectedIndex = 0;
       document.getElementById("entrega").selectedIndex = 0;
+
+      const bairro = document.getElementById("bairroEntrega");
+
+      if (bairro) {
+        bairro.selectedIndex = 0;
+      }
+
+      const areaBairro =
+        document.getElementById("areaBairroEntrega");
+
+      if (areaBairro) {
+        areaBairro.style.display = "none";
+      }
+
+      taxaEntregaBairro = 0;
 
       // Limpa o carrinho
       carrinho = [];
@@ -2061,6 +2221,33 @@ window.salvarConfigLoja = async function () {
     };
 
     console.log("DADOS:", configLoja);
+
+    let taxas = {};
+
+      const textoTaxas =
+        document.getElementById("taxasEntregaAdmin")?.value || "";
+
+      textoTaxas
+        .split("\n")
+        .forEach(linha => {
+
+          linha = linha.trim();
+
+          if (!linha) return;
+
+          const partes = linha.split("=");
+
+          if (partes.length !== 2) return;
+
+          const bairro = partes[0].trim();
+          const valor = Number(partes[1].trim());
+
+          if (bairro && !isNaN(valor)) {
+            taxas[bairro] = valor;
+          }
+        });
+
+        configLoja.taxasEntrega = taxas;
 
     await setDoc(
       doc(db, "Configuracoes", "Loja"),
