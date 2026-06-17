@@ -268,7 +268,26 @@ border-radius:8px;
 display:inline-block;
 }
 
+#btnTopo{
+  position:fixed;
+  bottom:20px;
+  right:20px;
+  width:50px;
+  height:50px;
+  border:none;
+  border-radius:50%;
+  background:#800000;
+  color:black;
+  font-size:22px;
+  cursor:pointer;
+  z-index:9999;
+  display:none;
+  box-shadow:0 4px 12px rgba(0,0,0,.25);
+}
 
+#btnTopo:hover{
+  transform:scale(1.05);
+}
 
 /* Titulo */
 
@@ -320,7 +339,9 @@ font-weight:bold;
   🔍 Nenhum produto encontrado
 </div>
 
-
+<button id="btnTopo" onclick="voltarAoTopo()">
+  ⬆️
+</button>
 
 
 <!-- CARRINHO -->
@@ -721,6 +742,29 @@ window.alterarTipoEntrega = function() {
     area.style.display = "none";
   }
 }
+
+window.voltarAoTopo = function () {
+
+  window.scrollTo({
+    top: 0,
+    behavior: "smooth"
+  });
+
+};
+
+window.addEventListener("scroll", () => {
+
+  const btn = document.getElementById("btnTopo");
+
+  if (!btn) return;
+
+  if (window.scrollY > 500) {
+    btn.style.display = "block";
+  } else {
+    btn.style.display = "none";
+  }
+
+});
 
 function atualizarBannerAviso() {
 
