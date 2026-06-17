@@ -354,7 +354,7 @@ font-weight:bold;
     Via Uber flash (por conta do cliente)
   </option>
 
-  <option value="loja">
+  <==option value="loja">
     Entrega pela loja
   </option>
 </select>
@@ -2149,7 +2149,7 @@ window.renderDashboardAdmin = function () {
 
       <label style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">
         <input type="checkbox" id="liveAtivaAdmin">
-        🔴 Ligar live
+        🔴 Dia de promoção
       </label>
 
       <label>
@@ -3316,6 +3316,8 @@ window.onload = async function () {
 };
 
 setInterval(limparReservas, 5000);
+
+
 
 window.migrarEstoque = async function () {
   try {
