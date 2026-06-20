@@ -1095,7 +1095,11 @@ if (entregaSelect.value === "loja") {
 
 } else {
 
-  taxa = parseFloat(entregaSelect.value || 0);
+  let taxa = Number(entregaSelect.value);
+
+    if (isNaN(taxa)) {
+      taxa = 0;
+    }
 }
 
 let pagamento = String(pagamentoSelect.value || "").trim();
