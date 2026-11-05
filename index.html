@@ -313,8 +313,6 @@ font-weight:bold;
   </button>
 </header>
 
-<div id="bannerAviso"></div>
-
 <div id="bannerAviso" class="banner-aviso" style="display:none;">
   <span id="textoBanner"></span>
 </div>
@@ -451,6 +449,7 @@ import {
   addDoc,
   updateDoc,
   deleteDoc,
+  increment,
   doc,
   runTransaction,
   serverTimestamp,
@@ -574,80 +573,136 @@ async function carregarConfigLoja() {
   atualizarBannerAviso();
 }
 
-// 🔥 CARREGAR PRODUTOS DO FIREBASE
+let unsubscribeProdutos = null;
+
 function carregarProdutosFirebase() {
-  onSnapshot(collection(db, "Produtos"), (snapshot) => {
-    produtos = snapshot.docs.map(docSnap => ({
-      id: docSnap.id,
-      ...docSnap.data()
-    }));
 
-    produtos.sort((a, b) => {
-  let ordemA = a.ordem ?? 999;
-  let ordemB = b.ordem ?? 999;
+      if (unsubscribeProdutos) {
+      unsubscribeProdutos();
+    }
 
-  if (ordemA !== ordemB) return ordemA - ordemB;
+    unsubscribeProdutos = onSnapshot(
+        collection(db, "Produtos"),
+    (snapshot) => {
 
-  return (a.nome || "").localeCompare(b.nome || "", "pt-BR");
-});
+      produtos = snapshot.docs.map(docSnap => ({
+        id: docSnap.id,
+        ...docSnap.data()
+      }));
 
-    gerarProdutos();
+      produtos.sort((a, b) => {
 
-      // ⏳ espera o DOM renderizar
-      setTimeout(() => {
-        produtos.forEach((p, index) => {
-          let id = index + 1;
+        const ordemA = a.ordem ?? 999;
+        const ordemB = b.ordem ?? 999;
 
-          if (p.ativo === false) return;
-          
-          if (document.getElementById("stock" + id)) {
-            mostrarEstoque("stock" + id);
-          }
+        if (ordemA !== ordemB) {
+          return ordemA - ordemB;
+        }
 
-          if (document.getElementById("op" + id)) {
-            atualizarSelect("op" + id, "stock" + id);
-          }
-        });
+        return (a.nome || "").localeCompare(
+          b.nome || "",
+          "pt-BR"
+        );
 
-        renderFiltrosCategoriaCliente();
-        filtrarProdutosCliente();
-      }, 0);
-  }, (erro) => {
-    console.error("Erro ao ouvir produtos do Firebase:", erro);
-    alert("Erro ao carregar produtos.");
-  });
+      });
+
+      gerarProdutos();
+
+      /*
+       * O HTML dos produtos já foi inserido no DOM.
+       * Não precisamos esperar outro ciclo do navegador.
+       */
+      produtos.forEach((p, index) => {
+
+        if (p.ativo === false) return;
+
+        const id = index + 1;
+
+        const stock = document.getElementById(
+          "stock" + id
+        );
+
+        if (stock) {
+          mostrarEstoque("stock" + id);
+        }
+
+        const select = document.getElementById(
+          "op" + id
+        );
+
+        if (select) {
+          atualizarSelect(
+            "op" + id,
+            "stock" + id
+          );
+        }
+
+      });
+
+      renderFiltrosCategoriaCliente();
+
+      filtrarProdutosCliente();
+
+    },
+    (erro) => {
+
+      console.error(
+        "Erro ao ouvir produtos do Firebase:",
+        erro
+      );
+
+      alert(
+        "Erro ao carregar produtos."
+      );
+
+    }
+  );
+
 }
 
 function gerarProdutos() {
-  let container = document.getElementById("produtosContainer");
-  container.innerHTML = "";
+
+  const container = document.getElementById("produtosContainer");
+
+  if (!container) return;
+
+  let html = "";
 
   produtos.forEach((p, index) => {
 
     if (p.ativo === false) return;
 
     try {
+
       if (!p || !p.nome || p.preco == null) return;
 
-      let idTela = index + 1;
-      let temOpcoes = Array.isArray(p.opcoes) && p.opcoes.length > 0;
+      const idTela = index + 1;
+
+      const temOpcoes =
+        Array.isArray(p.opcoes) &&
+        p.opcoes.length > 0;
 
       let opcoesHTML = "";
+
       if (temOpcoes) {
+
         opcoesHTML = `<option value="">Opções</option>`;
+
         p.opcoes.forEach(op => {
-          opcoesHTML += `<option value="${op}" data-img="${op}.jpg">${op}</option>`;
+
+          opcoesHTML +=
+            `<option value="${op}" data-img="${op}.jpg">${op}</option>`;
+
         });
       }
 
       let precoExibido = Number(p.preco || 0);
-      let htmlPreco = `R$ ${precoExibido.toFixed(2)}`;
 
-      if (
-        configLoja.liveAtiva &&
-        p.liveAtivo &&
-        Number(p.precoLive) > 0
-      ) {
+      let htmlPreco =
+        `R$ ${precoExibido.toFixed(2)}`;
+
+      if (produtoPodeUsarPrecoLive(p)) {
+
         precoExibido = Number(p.precoLive);
 
         htmlPreco = `
@@ -664,19 +719,61 @@ function gerarProdutos() {
             font-weight:bold;
             font-size:22px;
           ">
-          🏷️Por R$ ${precoExibido.toFixed(2)}
+            🔥Por R$ ${precoExibido.toFixed(2)}
           </div>
         `;
       }
 
-      container.innerHTML += `
+      let tarjasHTML = "";
+
+      const categoriasDestaque = Array.isArray(p.categoriasAdicionais)
+        ? p.categoriasAdicionais.filter(c => c && c.trim())
+        : [];
+
+      if (categoriasDestaque.length > 0) {
+        tarjasHTML = `
+          <div style="
+            position:absolute;
+            top:8px;
+            left:8px;
+            display:flex;
+            flex-wrap:wrap;
+            gap:5px;
+            z-index:2;
+          ">
+            ${categoriasDestaque.map(c => `
+              <span style="
+                background:#800000;
+                color:black;
+                padding:6px 10px;
+                border-radius:5px;
+                font-size:12px;
+                font-weight:bold;
+                box-shadow:0 2px 5px rgba(0,0,0,0.2);
+              ">
+                ${c.toUpperCase()}
+              </span>
+            `).join("")}
+          </div>
+        `;
+      }
+
+      html += `
         <div class="card"
           data-nome="${(p.nome || "").toLowerCase()}"
-          data-categoria="${(p.categoria || 'sem categoria').toLowerCase()}">
+          data-categoria="${(p.categoria || "sem categoria").toLowerCase()}"
+          data-categorias="${obterCategoriasProduto(p).map(c => c.toLowerCase()).join("|")}">
 
-          <img id="img${idTela}" 
-            src="imagens/${p.pasta || ""}/${p.imagem || ""}"
-            onerror="this.src='imagens/sem-imagem.jpg'">
+          <div style="position:relative;">
+            <img
+              id="img${idTela}"
+              src="imagens/${p.pasta || ""}/${p.imagem || ""}"
+              loading="lazy"
+              decoding="async"
+              onerror="this.onerror=null;this.src='imagens/sem-imagem.jpg'">
+
+            ${tarjasHTML}
+          </div>
 
           <h3>${p.nome || "Sem nome"} - ${p.marca || ""}</h3>
 
@@ -688,22 +785,48 @@ function gerarProdutos() {
 
           ${
             temOpcoes
-              ? `<select id="op${idTela}" onchange="trocarImagem('op${idTela}','img${idTela}','${p.pasta || ""}')">
+              ? `
+                <select
+                  id="op${idTela}"
+                  onchange="trocarImagem(
+                    'op${idTela}',
+                    'img${idTela}',
+                    '${p.pasta || ""}'
+                  )">
+
                   ${opcoesHTML}
-                </select>`
-              : ``
+
+                </select>
+              `
+              : ""
           }
 
-          <button class="btn"
-            onclick="addProduto('${p.id}', ${temOpcoes ? `'op${idTela}'` : 'null'})">
+          <button
+            class="btn"
+            onclick="addProduto(
+              '${p.id}',
+              ${temOpcoes ? `'op${idTela}'` : "null"}
+            )">
+
             Adicionar
+
           </button>
+
         </div>
       `;
+
     } catch (erro) {
-      console.error("Erro ao renderizar produto:", p, erro);
+
+      console.error(
+        "Erro ao renderizar produto:",
+        p,
+        erro
+      );
+
     }
+
   });
+  container.innerHTML = html;
 }
 
 window.mostrarBairrosEntrega = function() {
@@ -943,10 +1066,8 @@ async function devolverEstoqueProduto(produtoId, opcao, quantidade = 1) {
     let chaveEstoque = opcao || "unico";
     let atual = Number(estoque[chaveEstoque] || 0);
 
-    estoque[chaveEstoque] = atual + quantidade;
-
     transaction.update(ref, {
-      estoque
+      [`estoque.${chaveEstoque}`]: atual + quantidade
     });
   });
 }
@@ -1165,89 +1286,113 @@ window.addProduto = async function(produtoId, selectId) {
 
   if (temOpcoes) {
     let select = document.getElementById(selectId);
+
     if (!select || !select.value) {
       alert("Selecione uma opção");
       return;
     }
+
     opcaoTexto = select.value;
   }
 
-  try {
-    const produtoRef = doc(db, "Produtos", produtoId);
-    const reservasRef = collection(db, "Reservas");
+  const nomeFinal = temOpcoes
+    ? `${produto.nome} – ${opcaoTexto}`
+    : produto.nome;
 
-    let reservaId = null;
+  const itemExistente = carrinho.find(
+    item => item.nome === nomeFinal && item.produtoId === produtoId
+  );
+
+  const produtoRef = doc(db, "Produtos", produtoId);
+  const reservasRef = collection(db, "Reservas");
+  const novaReservaRef = doc(reservasRef);
+
+  const reservaExistenteRef = itemExistente?.reservaId
+    ? doc(db, "Reservas", itemExistente.reservaId)
+    : null;
+
+  try {
+    let novaReservaId = null;
 
     await runTransaction(db, async (transaction) => {
       const produtoSnap = await transaction.get(produtoRef);
-      if (!produtoSnap.exists()) throw "Produto não existe";
+
+      if (!produtoSnap.exists()) {
+        throw new Error("Produto não encontrado");
+      }
+
+      let reservaSnap = null;
+
+      if (reservaExistenteRef) {
+        reservaSnap = await transaction.get(reservaExistenteRef);
+      }
 
       const dados = produtoSnap.data();
       const estoque = dados.estoque;
 
-          let atual = 0;
-          let chave = opcaoTexto || "unico";
+      let atual = 0;
+      let estoqueNumerico = typeof estoque === "number";
+      const chave = opcaoTexto || "unico";
 
-          // 🔹 Produto simples (estoque é número)
-          if (typeof estoque === "number") {
-            atual = estoque;
-            chave = null;
-          }
-          // 🔹 Produto com variações (estoque é objeto)
-          else if (typeof estoque === "object") {
-            atual = Number(estoque[chave] || 0);
-          }
+      if (estoqueNumerico) {
+        atual = Number(estoque);
+      } else {
+        atual = Number(estoque?.[chave] || 0);
+      }
 
-          if (atual <= 0) {
-            throw "Sem estoque";
-          }
+      if (atual <= 0) {
+        throw new Error("Sem estoque");
+      }
 
-      // 🔻 baixa estoque
-          if (chave === null) {
-            transaction.update(produtoRef, {
-              estoque: atual - 1
-            });
-          } else {
-            transaction.update(produtoRef, {
-              [`estoque.${chave}`]: atual - 1
-            });
-          }
+      if (estoqueNumerico) {
+        transaction.update(produtoRef, {
+          estoque: atual - 1
+        });
+      } else {
+        transaction.update(produtoRef, {
+          [`estoque.${chave}`]: atual - 1
+        });
+      }
 
-      // 🔻 cria reserva DENTRO da transaction
-      const novaReservaRef = doc(reservasRef);
+      const reservaAtiva =
+        reservaSnap &&
+        reservaSnap.exists() &&
+        reservaSnap.data().status === "ativa";
 
-      transaction.set(novaReservaRef, {
-        produtoId: produtoId,
-        nome: temOpcoes ? `${produto.nome} – ${opcaoTexto}` : produto.nome,
-        opcao: opcaoTexto,
-        qtd: 1,
-        status: "ativa",
-        criadoEmMs: Date.now(),
-        criadoEm: serverTimestamp()
-      });
+      if (reservaAtiva) {
+        const qtdReservada = Number(reservaSnap.data().qtd || 0);
 
-      reservaId = novaReservaRef.id;
+        transaction.update(reservaExistenteRef, {
+          qtd: qtdReservada + 1
+        });
+
+        novaReservaId = itemExistente.reservaId;
+
+      } else {
+        transaction.set(novaReservaRef, {
+          produtoId: produtoId,
+          nome: nomeFinal,
+          opcao: opcaoTexto,
+          qtd: 1,
+          status: "ativa",
+          criadoEmMs: Date.now(),
+          criadoEm: serverTimestamp()
+        });
+
+        novaReservaId = novaReservaRef.id;
+      }
     });
 
-    let nomeFinal = temOpcoes
-      ? `${produto.nome} – ${opcaoTexto}`
-      : produto.nome;
+    if (itemExistente) {
+      itemExistente.qtd++;
+      itemExistente.tempo = Date.now();
+      itemExistente.reservaId = novaReservaId;
 
-    let item = carrinho.find(i => i.nome === nomeFinal);
-
-    if (item) {
-      item.qtd++;
-      item.tempo = Date.now();
     } else {
-
-
       let precoFinal = Number(produto.preco);
 
-      if (
-        configLoja.liveAtiva &&
-        produto.liveAtivo &&
-        Number(produto.precoLive) > 0
-      ) {
+      if (produtoPodeUsarPrecoLive(produto)) {
+        
         precoFinal = Number(produto.precoLive);
       }
 
@@ -1259,7 +1404,7 @@ window.addProduto = async function(produtoId, selectId) {
         opcao: opcaoTexto,
         promocao: produto.promocao || false,
         tempo: Date.now(),
-        reservaId: reservaId
+        reservaId: novaReservaId
       });
     }
 
@@ -1267,74 +1412,191 @@ window.addProduto = async function(produtoId, selectId) {
     salvarCarrinhoLocal();
 
     if (selectId) {
+      const select = document.getElementById(selectId);
 
-    const select = document.getElementById(selectId);
+      if (select) {
+        select.selectedIndex = 0;
 
-    if (select) {
-      select.selectedIndex = 0;
+        const numero = selectId.replace("op", "");
+        const stock = document.getElementById("stock" + numero);
 
-      const numero = selectId.replace("op", "");
+        if (stock) {
+          stock.innerHTML = "Selecione uma opção";
+        }
 
-      const stock = document.getElementById("stock" + numero);
+        const img = document.getElementById("img" + numero);
 
-      if (stock) {
-        stock.innerHTML = "Selecione uma opção";
-      }
-
-      const img = document.getElementById("img" + numero);
-
-      const produto = produtos.find(p => p.id === produtoId);
-
-      if (img && produto) {
-        img.src = `imagens/${produto.pasta}/${produto.imagem}`;
+        if (img) {
+          img.src = `imagens/${produto.pasta}/${produto.imagem}`;
+        }
       }
     }
-  }
 
   } catch (erro) {
     console.error("Erro ao adicionar produto:", erro);
-    alert("Produto sem estoque disponível.");
+
+    if (erro.message === "Sem estoque") {
+      alert("Produto sem estoque disponível.");
+    } else {
+      alert("Não foi possível adicionar o produto. Tente novamente.");
+    }
   }
 };
+
+async function atualizarQuantidadeReservada(item, novaQtd, movimento) {
+  const produtoRef = doc(db, "Produtos", item.produtoId);
+
+  const reservaRef = item.reservaId
+    ? doc(db, "Reservas", item.reservaId)
+    : null;
+
+  const novaReservaRef = doc(collection(db, "Reservas"));
+
+  return await runTransaction(db, async (transaction) => {
+    const produtoSnap = await transaction.get(produtoRef);
+
+    if (!produtoSnap.exists()) {
+      throw new Error("Produto não encontrado");
+    }
+
+    let reservaSnap = null;
+
+    if (reservaRef) {
+      reservaSnap = await transaction.get(reservaRef);
+    }
+
+    const produto = produtoSnap.data();
+    const estoque = produto.estoque;
+
+    const estoqueNumerico = typeof estoque === "number";
+    const chave = item.opcao || "unico";
+
+    let atual = estoqueNumerico
+      ? Number(estoque)
+      : Number(estoque?.[chave] || 0);
+
+    let novoEstoque;
+
+    if (movimento === "aumentar") {
+      if (atual < 1) {
+        throw new Error("Sem estoque");
+      }
+
+      novoEstoque = atual - 1;
+    } else {
+      novoEstoque = atual + 1;
+    }
+
+    if (estoqueNumerico) {
+      transaction.update(produtoRef, {
+        estoque: novoEstoque
+      });
+    } else {
+      transaction.update(produtoRef, {
+        [`estoque.${chave}`]: novoEstoque
+      });
+    }
+
+    const reservaAtiva =
+      reservaSnap &&
+      reservaSnap.exists() &&
+      reservaSnap.data().status === "ativa";
+
+    let reservaIdFinal = item.reservaId || null;
+
+    if (movimento === "aumentar") {
+      if (reservaAtiva) {
+        transaction.update(reservaRef, {
+          qtd: novaQtd
+        });
+      } else {
+        transaction.set(novaReservaRef, {
+          produtoId: item.produtoId,
+          nome: item.nome,
+          opcao: item.opcao || "unico",
+          qtd: novaQtd,
+          status: "ativa",
+          criadoEmMs: Date.now(),
+          criadoEm: serverTimestamp()
+        });
+
+        reservaIdFinal = novaReservaRef.id;
+      }
+    } else if (reservaAtiva) {
+      transaction.update(reservaRef, {
+        qtd: novaQtd,
+        ...(novaQtd <= 0
+          ? {
+              status: "expirada",
+              expiradoEmMs: Date.now()
+            }
+          : {})
+      });
+    }
+
+    return reservaIdFinal;
+  });
+}
+
 
 window.aumentar = async function(index) {
   let item = carrinho[index];
   if (!item) return;
 
   try {
-    await baixarEstoqueProduto(item.produtoId, item.opcao, 1);
+    const novaQtd = Number(item.qtd || 0) + 1;
 
-    // 🔥 cria NOVA reserva (não reutiliza antiga)
-    item.reservaId = null;
+    const reservaId = await atualizarQuantidadeReservada(
+      item,
+      novaQtd,
+      "aumentar"
+    );
 
-    item.qtd++;
+    item.qtd = novaQtd;
+    item.reservaId = reservaId;
     item.tempo = Date.now();
 
     atualizarCarrinho();
     salvarCarrinhoLocal();
+
   } catch (erro) {
-    alert("Sem estoque");
+    console.error("Erro ao aumentar quantidade:", erro);
+
+    if (erro.message === "Sem estoque") {
+      alert("Sem estoque disponível.");
+    } else {
+      alert("Não foi possível atualizar a quantidade.");
+    }
   }
 };
+
 
 window.diminuir = async function(index) {
   let item = carrinho[index];
   if (!item) return;
 
   try {
-    await expirarReserva(item);
+    const novaQtd = Number(item.qtd || 0) - 1;
 
-    item.qtd--;
+    await atualizarQuantidadeReservada(
+      item,
+      novaQtd,
+      "diminuir"
+    );
 
-    if (item.qtd <= 0) {
+    if (novaQtd <= 0) {
       carrinho.splice(index, 1);
+    } else {
+      item.qtd = novaQtd;
+      item.tempo = Date.now();
     }
 
     atualizarCarrinho();
     salvarCarrinhoLocal();
+
   } catch (erro) {
-    console.error("Erro ao diminuir item:", erro);
-    alert("Erro ao devolver estoque.");
+    console.error("Erro ao diminuir quantidade:", erro);
+    alert("Não foi possível devolver o produto ao estoque.");
   }
 };
 
@@ -1546,9 +1808,9 @@ window.finalizarPedido = async function () {
     return;
   }
 
-  let nomeCliente = document.getElementById("nomeCliente").value.trim();
-  let contatoCliente = document.getElementById("contatoCliente").value.trim();
-  let observacoes = document.getElementById("observacoesPedido").value.trim();
+  const nomeCliente = document.getElementById("nomeCliente").value.trim();
+  const contatoCliente = document.getElementById("contatoCliente").value.trim();
+  const observacoes = document.getElementById("observacoesPedido").value.trim();
 
   if (!nomeCliente) {
     alert("Informe seu nome.");
@@ -1560,81 +1822,75 @@ window.finalizarPedido = async function () {
     return;
   }
 
-  let pagamento = document.getElementById("pagamento").value;
+  const pagamento = document.getElementById("pagamento").value;
 
   if (!pagamento) {
     alert("Selecione a forma de pagamento.");
     return;
   }
 
-  let entregaSelect = document.getElementById("entrega");
+  const entregaSelect = document.getElementById("entrega");
 
   if (entregaSelect.selectedIndex === 0) {
     alert("Selecione a opção de entrega.");
     return;
   }
 
-  let entregaTexto =
+  const entregaTexto =
     entregaSelect.options[entregaSelect.selectedIndex].text;
 
-    let enderecoEntrega = "";
-
-    if (entregaSelect.value === "loja") {
-
-      const bairro =
-        document.getElementById("bairroEntrega").value;
-
-      enderecoEntrega =
-        document.getElementById("enderecoEntrega")
-          .value
-          .trim();
-
-      if (!bairro) {
-        alert("Selecione seu bairro.");
-        return;
-      }
-
-      if (!enderecoEntrega) {
-        alert("Informe o endereço para entrega.");
-        return;
-      }
-    }
-
+  let enderecoEntrega = "";
   let taxa = 0;
 
-    if (entregaSelect.value === "loja") {
-
-      const bairro =
-        document.getElementById("bairroEntrega").value;
-
-      taxa =
-        Number(configLoja.taxasEntrega?.[bairro] || 0);
-    }
-
-  let texto = "*NOVO PEDIDO*\n\n";
-
-  texto += `Cliente: ${nomeCliente}\n`;
-  texto += `Contato: ${contatoCliente}\n`;
-  texto += `Entrega: ${entregaTexto}\n`;
   if (entregaSelect.value === "loja") {
 
-    texto += `Bairro: ${document.getElementById("bairroEntrega").value}\n`;
+    const bairro =
+      document.getElementById("bairroEntrega").value;
 
-    texto += `Endereço: ${enderecoEntrega}\n`;
-  }
-  texto += `Pagamento: ${pagamento}\n\n`;
-  if (observacoes) {
-    texto += `Obs: ${observacoes}\n\n`;
-  }
+    enderecoEntrega =
+      document.getElementById("enderecoEntrega").value.trim();
 
-  texto += "ITENS\n\n";
+    if (!bairro) {
+      alert("Selecione seu bairro.");
+      return;
+    }
+
+    if (!enderecoEntrega) {
+      alert("Informe o endereço para entrega.");
+      return;
+    }
+
+    taxa = Number(configLoja.taxasEntrega?.[bairro] || 0);
+  }
 
   let subtotal = 0;
   let subtotalElegivelPix = 0;
 
+  let texto = "";
+
+  texto += `🛍️ *NOVO PEDIDO*\n\n`;
+  texto += `Cliente: ${nomeCliente}\n`;
+  texto += `Contato: ${contatoCliente}\n`;
+  texto += `Entrega: ${entregaTexto}\n`;
+
+  if (entregaSelect.value === "loja") {
+    texto += `Bairro: ${document.getElementById("bairroEntrega").value}\n`;
+    texto += `Endereço: ${enderecoEntrega}\n`;
+  }
+
+  texto += `Pagamento: ${pagamento}\n\n`;
+
+  if (observacoes) {
+    texto += `Obs: ${observacoes}\n\n`;
+  }
+
+  texto += "━━━━━━━━━━━━━━━━━━━━\n";
+  texto += "🛒 *ITENS DO PEDIDO*\n";
+  texto += "━━━━━━━━━━━━━━━━━━━━\n\n";
+
   carrinho.forEach(item => {
 
-    let sub = item.preco * item.qtd;
+    const sub = item.preco * item.qtd;
 
     subtotal += sub;
 
@@ -1642,41 +1898,137 @@ window.finalizarPedido = async function () {
       subtotalElegivelPix += sub;
     }
 
-    texto += `• ${item.nome}\n`;
-    texto += `${item.qtd}x R$ ${item.preco.toFixed(2)}\n\n`;
+    texto += `▪️ *${item.nome}*\n`;
+
+    if (item.opcao && item.opcao !== "unico") {
+      texto += `Opção: ${item.opcao}\n`;
+    }
+
+    texto += `${item.qtd} x R$ ${item.preco.toFixed(2)}\n\n`;
   });
 
   let desconto = 0;
 
-  let minimoPix = Number(configLoja.minimoPix || 0);
-  let descontoPix = Number(configLoja.descontoPix || 0);
-
   if (
     pagamento.toLowerCase() === "pix" &&
-    subtotalElegivelPix >= minimoPix
+    subtotalElegivelPix >= Number(configLoja.minimoPix || 0)
   ) {
     desconto =
       subtotalElegivelPix *
-      (descontoPix / 100);
+      (Number(configLoja.descontoPix || 0) / 100);
   }
 
-  let total = subtotal + taxa - desconto;
+  const total = subtotal + taxa - desconto;
 
-      texto += `Subtotal: R$ ${subtotal.toFixed(2)}\n`;
+  texto += "━━━━━━━━━━━━━━━━━━━━\n";
+  texto += `💰 Subtotal: R$ ${subtotal.toFixed(2)}\n`;
 
-      if (taxa > 0) {
-        texto += `Taxa de entrega: R$ ${taxa.toFixed(2)}\n`;
-      }
+  if (desconto > 0) {
+    texto += `🏷️ Desconto PIX: -R$ ${desconto.toFixed(2)}\n`;
+  }
 
-      if (desconto > 0) {
-        texto += `Desconto PIX: -R$ ${desconto.toFixed(2)}\n`;
-      }
+  if (taxa > 0) {
+    texto += `🚚 Entrega: R$ ${taxa.toFixed(2)}\n`;
+  }
 
-      texto += `Total: R$ ${total.toFixed(2)}\n`;
+  texto += `🧾 TOTAL: R$ ${total.toFixed(2)}\n`;
+  texto += "━━━━━━━━━━━━━━━━━━━━";
 
   try {
 
+    const pedido =
     await salvarPedidoFirebaseComDesconto(
+        subtotal,
+        subtotalElegivelPix,
+        taxa,
+        desconto,
+        total,
+        pagamento,
+        entregaTexto,
+        nomeCliente,
+        contatoCliente,
+        observacoes,
+        enderecoEntrega
+      );
+
+    const cabecalho =
+    `🛍️ *Pedido ${pedido.codigoPedido}*\n\n`;
+
+    texto = texto.replace(
+        /^🛍️ \*NOVO PEDIDO\*\n\n/,
+        cabecalho
+    );
+
+    const numeroLoja = "5585987128621";
+
+    window.open(
+      `https://wa.me/${numeroLoja}?text=${encodeURIComponent(texto)}`,
+      "_blank"
+    );
+
+    document.getElementById("nomeCliente").value = "";
+    document.getElementById("contatoCliente").value = "";
+    document.getElementById("observacoesPedido").value = "";
+    document.getElementById("pagamento").selectedIndex = 0;
+    document.getElementById("entrega").selectedIndex = 0;
+
+    const bairro = document.getElementById("bairroEntrega");
+    if (bairro) bairro.selectedIndex = 0;
+
+    const area = document.getElementById("areaBairroEntrega");
+    if (area) area.style.display = "none";
+
+    const endereco = document.getElementById("enderecoEntrega");
+    if (endereco) endereco.value = "";
+
+    taxaEntregaBairro = 0;
+
+    carrinho = [];
+    salvarCarrinhoLocal();
+    atualizarCarrinho();
+
+  } catch (erro) {
+    console.error(erro);
+    alert("Erro ao finalizar pedido.");
+  }
+
+};
+
+async function gerarNumeroPedido() {
+
+  const contadorRef = doc(db, "Configuracoes", "ContadorPedidos");
+
+  let numeroPedido = 0;
+
+  await runTransaction(db, async (transaction) => {
+
+    const snap = await transaction.get(contadorRef);
+
+    if (!snap.exists()) {
+
+      numeroPedido = 1;
+
+      transaction.set(contadorRef, {
+        ultimoNumero: numeroPedido
+      });
+
+    } else {
+
+      numeroPedido = (snap.data().ultimoNumero || 0) + 1;
+
+      transaction.update(contadorRef, {
+        ultimoNumero: numeroPedido
+      });
+
+    }
+
+  });
+
+  return numeroPedido;
+
+}
+
+async function salvarPedidoFirebaseComDesconto(
       subtotal,
       subtotalElegivelPix,
       taxa,
@@ -1688,93 +2040,66 @@ window.finalizarPedido = async function () {
       contatoCliente,
       observacoes,
       enderecoEntrega
-    );
+    )
+  { 
+    
+    let itens = carrinho.map(item => ({
+      produtoId: item.produtoId,
+      nome: item.nome,
+      opcao: item.opcao,
+      preco: item.preco,
+      qtd: item.qtd,
+      promocao: item.promocao || false
+    }));
 
-    const numeroLoja = "5585987128621"; // TROCAR
+    const docRef = await addDoc(collection(db, "Pedidos"), {
+      nomeCliente,
+      contatoCliente,
+      observacoes,
+      enderecoEntrega,
+      itens,
+      pagamento,
+      formaPagamento: pagamento,
+      entrega: entregaTexto,
+      subtotal,
+      subtotalElegivelPix,
+      taxaEntrega: taxa,
+      desconto,
+      total,
+      status: "novo",
 
-    const linkWhatsapp =
-      `https://wa.me/${numeroLoja}?text=${encodeURIComponent(texto)}`;
+      // Controle do pagamento
+      statusPagamento: "pendente",
+      statusMercadoPago: "",
+      idPagamento: "",
+      preferenciaMercadoPago: "",
+      valorPago: 0,
+      dataPagamento: null,
 
-    window.open(linkWhatsapp, "_blank");
-
-      // Limpa os campos do cliente
-      document.getElementById("nomeCliente").value = "";
-      document.getElementById("contatoCliente").value = "";
-      document.getElementById("observacoesPedido").value = "";
-
-      // Volta os selects para o padrão
-      document.getElementById("pagamento").selectedIndex = 0;
-      document.getElementById("entrega").selectedIndex = 0;
-
-      const bairro = document.getElementById("bairroEntrega");
-
-      if (bairro) {
-        bairro.selectedIndex = 0;
-      }
-
-      const areaBairro =
-        document.getElementById("areaBairroEntrega");
-
-      if (areaBairro) {
-        areaBairro.style.display = "none";
-      }
-
-      taxaEntregaBairro = 0;
-
-      // Limpa o carrinho
-      carrinho = [];
-
-      salvarCarrinhoLocal();
-      atualizarCarrinho();
-
-  } catch (erro) {
-
-    console.error(erro);
-
-    alert("Erro ao finalizar pedido.");
-  }
-};
-
-  async function salvarPedidoFirebaseComDesconto(
-    subtotal,
-    subtotalElegivelPix,
-    taxa,
-    desconto,
-    total,
-    pagamento,
-    entregaTexto,
-    nomeCliente,
-    contatoCliente,
-    observacoes,
-    enderecoEntrega
-  )
- { 
-  
-  let itens = carrinho.map(item => ({
-    produtoId: item.produtoId,
-    nome: item.nome,
-    opcao: item.opcao,
-    preco: item.preco,
-    qtd: item.qtd,
-    promocao: item.promocao || false
-  }));
-
-  await addDoc(collection(db, "Pedidos"), {
-    nomeCliente,
-    contatoCliente,
-    observacoes,
-    enderecoEntrega,
-    itens,
-    pagamento,
-    entrega: entregaTexto,
-    subtotal,
-    subtotalElegivelPix,
-    taxaEntrega: taxa,
-    desconto,
-    total,
-    status: "novo",
-    criadoEm: serverTimestamp()
+      criadoEm: serverTimestamp()
   });
+
+  const numeroPedido = await gerarNumeroPedido();
+
+  const codigoPedido =
+  `BE-${String(numeroPedido).padStart(6,"0")}`;
+
+  await updateDoc(docRef,{
+      numeroPedido,
+      codigoPedido
+  });
+
+    return {
+
+        id: docRef.id,
+
+        numeroPedido,
+
+        codigoPedido,
+
+        total
+
+    };
 }
 
 
@@ -1795,7 +2120,7 @@ window.abrirPedidosAdmin = function () {
 
     let pedido = docSnap.data();
 
-    if (pedido.status !== "entregue") {
+    if (pedido.status !== "concluido") {
       pedidosPendentes++;
       return;
     }
@@ -1850,11 +2175,149 @@ window.abrirPedidosAdmin = function () {
   });
 };
 
+function gerarMensagemStatusPedido(pedido, novoStatus) {
+
+      const numeroPedido = pedido.numeroPedido || "----";
+
+      const itens = (pedido.itens || [])
+          .map(item => `• ${item.nome} (${item.qtd}x)`)
+          .join("\n");
+
+      const total = Number(pedido.total || 0).toFixed(2);
+
+      let mensagem = `🌸 *Bárbara Emily Cosméticos*\n\n`;
+
+      mensagem += `Pedido Nº ${numeroPedido}\n\n`;
+
+      mensagem += `Olá, ${pedido.nomeCliente}! 😊\n\n`;
+
+      switch (novoStatus) {
+
+          case "aguardando_pagamento":
+
+              mensagem +=
+  `Recebemos seu pedido com sucesso.
+
+  Estamos aguardando a confirmação do pagamento.
+
+  Assim que ele for identificado iniciaremos a preparação.
+
+  `;
+
+          break;
+
+          case "confirmado":
+
+              mensagem +=
+          `Seu pagamento foi confirmado. ✅
+
+          Agora vamos iniciar a preparação do seu pedido.
+
+          `;
+
+          break;
+
+          case "separacao":
+
+              mensagem +=
+  `Seu pedido já está em separação. 📦
+
+  Em breve ele estará pronto.
+
+  `;
+
+          break;
+
+          case "pronto":
+
+              if ((pedido.entrega || "").toLowerCase().includes("retirar")) {
+
+                  mensagem +=
+          `Seu pedido já está pronto. 📍
+
+          Você já pode retirá-lo na loja.
+
+          Aguardamos você!
+
+          `;
+
+              } else {
+
+                  mensagem +=
+          `Seu pedido já está pronto. 📦
+
+          Agora ele será encaminhado para entrega.
+
+          Em breve você o receberá.
+
+          `;
+
+              }
+
+          break;
+
+          case "concluido":
+
+              mensagem +=
+          `Seu pedido foi concluído. ✅
+
+          Muito obrigado pela preferência!
+
+          Esperamos você novamente em breve.
+
+          `;
+
+          break;
+
+          case "cancelado":
+
+              mensagem +=
+          `Seu pedido foi cancelado.
+
+          Caso tenha sido um engano, fale conosco.
+
+          `;
+
+          break;
+
+      }
+
+      mensagem += "Itens do pedido:\n\n";
+
+      mensagem += itens;
+
+      mensagem += `\n\n💰 Total: R$ ${total}`;
+
+      if (pedido.pagamento) {
+
+          mensagem += `\n💳 Pagamento: ${pedido.pagamento}`;
+
+      }
+
+      if (pedido.entrega) {
+
+          mensagem += `\n🚚 Entrega: ${pedido.entrega}`;
+
+      }
+
+      return mensagem;
+
+}
+
 window.atualizarStatusPedido = async function (pedidoId, novoStatus) {
+
+  if (window.atualizandoPedido) {
+    return;
+  }
+
+  window.atualizandoPedido = true;
+
   try {
+
     const pedidoRef = doc(db, "Pedidos", pedidoId);
 
     await runTransaction(db, async (transaction) => {
+
       const pedidoSnap = await transaction.get(pedidoRef);
 
       if (!pedidoSnap.exists()) {
@@ -1862,54 +2325,238 @@ window.atualizarStatusPedido = async function (pedidoId, novoStatus) {
       }
 
       const pedido = pedidoSnap.data();
-      const statusAtual = (pedido.status || "novo").toLowerCase();
-      const itens = Array.isArray(pedido.itens) ? pedido.itens : [];
 
-      // Só devolve estoque se estiver cancelando agora
-      if (novoStatus === "cancelado" && statusAtual !== "cancelado") {
-        // 1) LER todos os produtos primeiro
+      const statusAtual =
+        (pedido.status || "novo").toLowerCase();
+
+      const itens =
+        Array.isArray(pedido.itens)
+          ? pedido.itens
+          : [];
+
+      // Devolve o estoque somente ao cancelar
+      // um pedido que ainda não estava cancelado
+      if (
+        novoStatus === "cancelado" &&
+        statusAtual !== "cancelado"
+      ) {
+
         const produtosLidos = [];
 
         for (const item of itens) {
-          if (!item.produtoId) continue;
 
-          const produtoRef = doc(db, "Produtos", item.produtoId);
-          const produtoSnap = await transaction.get(produtoRef);
+          if (!item.produtoId) {
+            continue;
+          }
 
-          if (!produtoSnap.exists()) continue;
+          const produtoRef =
+            doc(db, "Produtos", item.produtoId);
+
+          const produtoSnap =
+            await transaction.get(produtoRef);
+
+          if (!produtoSnap.exists()) {
+            continue;
+          }
 
           produtosLidos.push({
             item,
             produtoRef,
             produto: produtoSnap.data()
           });
+
         }
 
-        // 2) SÓ DEPOIS fazer os updates
         for (const dado of produtosLidos) {
-          const estoque = dado.produto.estoque || {};
-          const chaveEstoque = dado.item.opcao || "unico";
-          const atual = Number(estoque[chaveEstoque] || 0);
-          const qtd = Number(dado.item.qtd || 0);
 
-          transaction.update(dado.produtoRef, {
-            [`estoque.${chaveEstoque}`]: atual + qtd
-          });
+          const estoque =
+            dado.produto.estoque || {};
+
+          const chave =
+            dado.item.opcao || "unico";
+
+          const atual =
+            Number(estoque[chave] || 0);
+
+          const qtd =
+            Number(dado.item.qtd || 0);
+
+          transaction.update(
+            dado.produtoRef,
+            {
+              [`estoque.${chave}`]:
+                atual + qtd
+            }
+          );
+
         }
+
       }
 
-      transaction.update(pedidoRef, {
-        status: novoStatus
-      });
+      transaction.update(
+        pedidoRef,
+        {
+          status: novoStatus
+        }
+      );
+
     });
 
-    alert(`Pedido atualizado para: ${novoStatus}`);
+    // Tenta enviar a mensagem correspondente
+    // ao novo status
+    let mensagemEnviada = false;
+
+    if (novoStatus !== "novo") {
+
+      mensagemEnviada =
+        await enviarMensagemPedido(pedidoId);
+
+    }
+
+    // Atualiza novamente a lista de pedidos
+    if (
+      typeof filtrarPedidosAdmin === "function"
+    ) {
+
+      filtrarPedidosAdmin(
+        statusFiltroPedidosAtual
+      );
+
+    }
+
+    if (mensagemEnviada) {
+
+      alert(
+        "Status atualizado e mensagem enviada para o WhatsApp."
+      );
+
+    } else {
+
+      alert(
+        "Status atualizado.\n\n" +
+        "A mensagem do WhatsApp não foi enviada."
+      );
+
+    }
+
   } catch (erro) {
-    console.error("Erro ao atualizar status do pedido:", erro);
-    alert("Erro ao atualizar status.");
+
+    console.error(
+      "Erro ao atualizar status do pedido:",
+      erro
+    );
+
+    alert(
+      "Erro ao atualizar status."
+    );
+
+  } finally {
+
+    // Nunca deixa o sistema travado
+    window.atualizandoPedido = false;
+
   }
+
 };
 
+window.enviarMensagemPedido = async function (pedidoId) {
+
+  try {
+
+    const pedidoRef = doc(db, "Pedidos", pedidoId);
+    const pedidoSnap = await getDoc(pedidoRef);
+
+    if (!pedidoSnap.exists()) {
+      alert("Pedido não encontrado.");
+      return false;
+    }
+
+    const pedido = pedidoSnap.data();
+
+    const status = pedido.status || "novo";
+
+    // Não enviar mensagem automática para o status "novo"
+    if (status === "novo") {
+      alert("O pedido ainda está como NOVO. A mensagem para o cliente será enviada quando o status mudar para Aguardando Pagamento.");
+      return false;
+    }
+
+    const historicoWhatsapp = pedido.whatsapp || {};
+
+    // Verifica se já foi enviada uma mensagem para este status
+    if (historicoWhatsapp[status] === true) {
+
+      const reenviar = confirm(
+        "Já existe uma mensagem enviada para este status.\n\nDeseja enviar novamente?"
+      );
+
+      if (!reenviar) {
+        return false;
+      }
+    }
+
+    const mensagem = gerarMensagemStatusPedido(
+      pedido,
+      status
+    );
+
+    let telefone = (pedido.contatoCliente || "").replace(/\D/g, "");
+
+    if (!telefone) {
+      alert("Cliente sem telefone.");
+      return false;
+    }
+
+    if (!telefone.startsWith("55")) {
+      telefone = "55" + telefone;
+    }
+
+    const urlWhatsapp =
+      `https://wa.me/${telefone}?text=${encodeURIComponent(mensagem)}`;
+
+    const janela = window.open(
+      urlWhatsapp,
+      "_blank"
+    );
+
+    // Se o navegador bloqueou a abertura
+    if (!janela) {
+
+      alert(
+        "O navegador bloqueou a abertura do WhatsApp.\n\n" +
+        "Permita pop-ups para este site e tente novamente."
+      );
+
+      return false;
+    }
+
+    // Só registra no histórico depois de abrir o WhatsApp
+    await updateDoc(pedidoRef, {
+
+      [`whatsapp.${status}`]: true,
+
+      ultimoEnvioWhatsapp: serverTimestamp()
+
+    });
+
+    return true;
+
+  } catch (erro) {
+
+    console.error(
+      "Erro ao enviar mensagem WhatsApp:",
+      erro
+    );
+
+    alert(
+      "Erro ao abrir o WhatsApp."
+    );
+
+    return false;
+
+  }
+
+};
 
 function atualizarSelect(selectId, stockId) {
   let select = document.getElementById(selectId);
@@ -1940,39 +2587,73 @@ function atualizarSelect(selectId, stockId) {
   }
 }
 
+async function marcarReservaExpirada(item) {
+  if (!item.reservaId) return;
+
+  try {
+    await updateDoc(doc(db, "Reservas", item.reservaId), {
+      status: "expirada",
+      expiradoEmMs: Date.now()
+    });
+  } catch (erro) {
+    console.warn("Não foi possível marcar a reserva como expirada:", erro);
+  }
+}
+
 async function expirarReserva(item) {
+  if (!item || !item.produtoId) return;
+
+  const produtoRef = doc(db, "Produtos", item.produtoId);
+
+  // Garante um ID fixo para impedir devoluções duplicadas.
   if (!item.reservaId) {
-    console.warn("Item sem reservaId:", item);
-    return;
+    item.reservaId = doc(collection(db, "Reservas")).id;
   }
 
   const reservaRef = doc(db, "Reservas", item.reservaId);
-  const produtoRef = doc(db, "Produtos", item.produtoId);
 
   await runTransaction(db, async (transaction) => {
-    const reservaSnap = await transaction.get(reservaRef);
     const produtoSnap = await transaction.get(produtoRef);
+    const reservaSnap = await transaction.get(reservaRef);
 
     if (!produtoSnap.exists()) return;
 
+    // Se já foi expirada, não devolve o estoque novamente.
+    if (
+      reservaSnap.exists() &&
+      reservaSnap.data().status !== "ativa"
+    ) {
+      return;
+    }
+
     const produto = produtoSnap.data();
-    const estoque = produto.estoque || {};
-    const chaveEstoque = item.opcao || "unico";
-    const atual = Number(estoque[chaveEstoque] || 0);
-    const qtd = Number(item.qtd || 0);
+    const estoque = produto.estoque;
+    const chave = item.opcao || "unico";
 
-    // 🔥 SEMPRE devolve estoque (independente do status)
-    transaction.update(produtoRef, {
-      [`estoque.${chaveEstoque}`]: atual + qtd
-    });
+    const quantidade = Number(item.qtd || 0);
 
-    // 🔥 Atualiza reserva se existir
-    if (reservaSnap.exists()) {
-      transaction.update(reservaRef, {
-        status: "expirada",
-        expiradoEmMs: Date.now()
+    if (quantidade <= 0) return;
+
+    if (typeof estoque === "number") {
+      transaction.update(produtoRef, {
+        estoque: Number(estoque) + quantidade
+      });
+    } else {
+      const atual = Number(estoque?.[chave] || 0);
+
+      transaction.update(produtoRef, {
+        [`estoque.${chave}`]: atual + quantidade
       });
     }
+
+    transaction.set(reservaRef, {
+      produtoId: item.produtoId,
+      nome: item.nome,
+      opcao: chave,
+      qtd: quantidade,
+      status: "expirada",
+      expiradoEmMs: Date.now()
+    }, { merge: true });
   });
 }
 
@@ -1986,9 +2667,11 @@ async function limparReservas() {
     if (agora - item.tempo > tempoReserva) {
 
       // 🔒 evita rodar duas vezes no mesmo item
-      if (reservasProcessando.has(item.reservaId)) continue;
+      const chaveProc = item.reservaId || `${item.produtoId}_${item.opcao}`;
 
-      reservasProcessando.add(item.reservaId);
+      if (reservasProcessando.has(chaveProc)) continue;
+
+      reservasProcessando.add(chaveProc);
 
       try {
         await expirarReserva(item);
@@ -1997,7 +2680,7 @@ async function limparReservas() {
       } catch (erro) {
         console.error("Erro ao expirar:", erro);
       } finally {
-        reservasProcessando.delete(item.reservaId);
+        reservasProcessando.delete(chaveProc);
       }
     }
   }
@@ -2367,11 +3050,17 @@ window.salvarConfigLoja = async function () {
   }
 };
 
+let unsubscribeDashboardVendas = null;
+
 window.dashboardVendas = function (periodo = "total") {
 
   const pedidosRef = collection(db, "Pedidos");
 
-  onSnapshot(pedidosRef, (snapshot) => {
+    if (unsubscribeDashboardVendas) {
+      unsubscribeDashboardVendas();
+    }
+
+    unsubscribeDashboardVendas = onSnapshot(pedidosRef, (snapshot) => {
 
     let totalPedidos = 0;
     let faturamento = 0;
@@ -2384,7 +3073,7 @@ window.dashboardVendas = function (periodo = "total") {
 
       let pedido = docSnap.data();
 
-      if (pedido.status !== "entregue") {
+      if (pedido.status !== "concluido") {
         pedidosPendentes++;
         return;
       }
@@ -2520,7 +3209,7 @@ window.exportarRelatorioCSV = async function () {
 
       let pedido = docSnap.data();
 
-      if (pedido.status !== "entregue") return;
+      if (pedido.status !== "concluido") return;
 
       let data = pedido.criadoEm?.toDate
         ? pedido.criadoEm.toDate().toLocaleString("pt-BR")
@@ -2563,14 +3252,38 @@ window.exportarRelatorioCSV = async function () {
   }
 };
 
+function obterCategoriasProduto(p) {
+  const adicionais = Array.isArray(p.categoriasAdicionais)
+    ? p.categoriasAdicionais
+    : [];
+
+  return [...new Set(
+    [p.categoria, ...adicionais]
+      .map(c => (c || "").trim())
+      .filter(Boolean)
+  )];
+}
+
+function produtoPodeUsarPrecoLive(p) {
+  const temCategoriaAdicional =
+    Array.isArray(p.categoriasAdicionais) &&
+    p.categoriasAdicionais.some(
+      c => typeof c === "string" && c.trim()
+    );
+
+  return (
+    (configLoja.liveAtiva || temCategoriaAdicional) &&
+    p.liveAtivo &&
+    Number(p.precoLive) > 0
+  );
+}
+
 window.renderFiltrosCategoriaCliente = function () {
   let box = document.getElementById("filtrosCategoriaCliente");
   if (!box) return;
 
   let categorias = [...new Set(
-    produtos
-      .map(p => (p.categoria || "Sem categoria").trim())
-      .filter(c => c)
+    produtos.flatMap(p => obterCategoriasProduto(p))
   )].sort((a, b) => a.localeCompare(b, "pt-BR"));
 
   box.innerHTML = "";
@@ -2616,12 +3329,12 @@ window.filtrarProdutosCliente = function () {
 
   cards.forEach(card => {
     let nome = card.getAttribute("data-nome") || "";
-    let categoria = card.getAttribute("data-categoria") || "";
+    let categorias = (card.getAttribute("data-categorias") || "").split("|");
 
     let passaBusca = nome.includes(busca);
     let passaCategoria =
       categoriaFiltroCliente === "todos" ||
-      categoria === categoriaFiltroCliente;
+      categorias.includes(categoriaFiltroCliente);
 
     if (passaBusca && passaCategoria) {
       card.style.display = "block";
@@ -2642,7 +3355,7 @@ window.renderSecaoProdutosAdmin = function () {
   if (!container) return;
 
   let categorias = [...new Set(
-    produtos.map(p => (p.categoria || "Sem categoria").trim()).filter(c => c)
+    produtos.flatMap(p => obterCategoriasProduto(p))
   )].sort((a, b) => a.localeCompare(b, "pt-BR"));
 
   let html = `
@@ -2694,6 +3407,10 @@ window.renderSecaoProdutosAdmin = function () {
         <input id="novo_nome" placeholder="Nome">
         <input id="novo_marca" placeholder="Marca">
         <input id="novaCategoria" placeholder="Categoria (ex: Batons)">
+        <input
+          id="novasCategoriasAdicionais"
+          placeholder="Categorias adicionais (ex: Black Friday, Promoções)"
+        >
         <input id="novo_preco" type="number" placeholder="Preço">
         <input id="novo_pasta" placeholder="Nome da pasta da imagem">
         <input id="novo_opcoes" placeholder="Opções (ex: Azul,Verde,Rosa)">
@@ -2745,8 +3462,9 @@ window.renderSecaoProdutosAdmin = function () {
     html += `
       <div
         class="cardProdutoAdmin"
-        data-nome="${p.nome.toLowerCase()}"
+        data-nome="${(p.nome || "").toLowerCase()}"
         data-categoria="${(p.categoria || "Sem categoria").toLowerCase()}"
+        data-categorias="${obterCategoriasProduto(p).map(c => c.toLowerCase()).join("|")}"
         style="
           border:1px solid #ddd;
           border-radius:14px;
@@ -2810,6 +3528,14 @@ window.renderSecaoProdutosAdmin = function () {
 
           Categoria:<br>
           <input id="p_categoria_${index}" value="${p.categoria || ""}" style="width:100%; margin-bottom:8px;"><br>
+
+          Categorias adicionais:<br>
+          <input
+            id="p_categoriasAdicionais_${index}"
+            value="${(Array.isArray(p.categoriasAdicionais) ? p.categoriasAdicionais : []).join(", ")}"
+            placeholder="Ex: Black Friday, Promoções"
+            style="width:100%; margin-bottom:8px;"
+          ><br>
 
           <label style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
             <input type="checkbox" id="p_promocao_${index}" ${p.promocao ? "checked" : ""}>
@@ -2922,12 +3648,12 @@ window.filtrarProdutosAdmin = function () {
 
   cards.forEach(card => {
     let nome = card.getAttribute("data-nome") || "";
-    let categoria = card.getAttribute("data-categoria") || "";
+    let categorias = (card.getAttribute("data-categorias") || "").split("|");
 
     let passaBusca = nome.includes(busca);
     let passaCategoria =
       window.categoriaFiltroAtual === "todos" ||
-      categoria === window.categoriaFiltroAtual;
+      categorias.includes(window.categoriaFiltroAtual);
 
     if (passaBusca && passaCategoria) {
       card.style.display = "block";
@@ -2953,11 +3679,13 @@ window.renderSecaoPedidosAdmin = function () {
 
     <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:16px;">
       <button onclick="filtrarPedidosAdmin('todos')">Todos</button>
-      <button onclick="filtrarPedidosAdmin('novo')">Novos</button>
-      <button onclick="filtrarPedidosAdmin('separando')">Separando</button>
-      <button onclick="filtrarPedidosAdmin('pronto')">Prontos</button>
-      <button onclick="filtrarPedidosAdmin('entregue')">Entregues</button>
-      <button onclick="filtrarPedidosAdmin('cancelado')">Cancelados</button>
+<button onclick="filtrarPedidosAdmin('novo')">Novos</button>
+<button onclick="filtrarPedidosAdmin('aguardando_pagamento')">Aguardando Pagamento</button>
+<button onclick="filtrarPedidosAdmin('confirmado')">Confirmados</button>
+<button onclick="filtrarPedidosAdmin('separacao')">Em Separação</button>
+<button onclick="filtrarPedidosAdmin('pronto')">Prontos</button>
+<button onclick="filtrarPedidosAdmin('concluido')">Concluídos</button>
+<button onclick="filtrarPedidosAdmin('cancelado')">Cancelados</button>
 
       <button
         onclick="apagarPedidosCancelados()"
@@ -2972,6 +3700,22 @@ window.renderSecaoPedidosAdmin = function () {
       >
         🗑️ Limpar Cancelados
       </button>
+    </div>
+
+    <div style="margin-bottom:15px;">
+      <input
+        id="buscaPedidoAdmin"
+        type="text"
+        placeholder="🔍 Buscar por nº do pedido, cliente ou telefone..."
+        style="
+          width:100%;
+          padding:10px;
+          border:1px solid #ccc;
+          border-radius:8px;
+          font-size:15px;
+        "
+        oninput="filtrarPedidosAdmin(statusFiltroPedidosAtual)"
+      >
     </div>
 
     <div id="listaPedidosAdmin">Carregando...</div>
@@ -3018,6 +3762,67 @@ window.apagarPedidosCancelados = async function () {
   }
 };
 
+function mostrarHistoricoWhatsapp(pedido){
+
+    const enviados = pedido.whatsapp || {};
+
+    const itens = [
+
+        {
+            chave:"aguardando_pagamento",
+            texto:"💰 Aguardando pagamento"
+        },
+
+        {
+            chave:"confirmado",
+            texto:"✔ Pagamento confirmado"
+        },
+
+        {
+            chave:"separacao",
+            texto:"📦 Em separação"
+        },
+
+        {
+            chave:"pronto",
+            texto:"📍 Pronto"
+        },
+
+        {
+            chave:"concluido",
+            texto:"✅ Concluído"
+        },
+
+        {
+            chave:"cancelado",
+            texto:"❌ Cancelado"
+        }
+
+    ];
+
+    return itens.map(item=>`
+
+        <div style="
+            display:flex;
+            justify-content:space-between;
+            margin:3px 0;
+        ">
+
+            <span>${item.texto}</span>
+
+            <span style="
+                font-weight:bold;
+                color:${enviados[item.chave] ? "#16a34a" : "#9ca3af"};
+            ">
+                ${enviados[item.chave] ? "✔" : "—"}
+            </span>
+
+        </div>
+
+    `).join("");
+
+}
+
 window.filtrarPedidosAdmin = function (statusFiltro = "todos") {
   statusFiltroPedidosAtual = statusFiltro;
 
@@ -3045,12 +3850,37 @@ window.filtrarPedidosAdmin = function (statusFiltro = "todos") {
 
     let encontrou = false;
 
+    const busca = (
+      document.getElementById("buscaPedidoAdmin")?.value || ""
+    ).toLowerCase().trim();
+
     snapshot.forEach((docSnap) => {
       let p = docSnap.data();
       let status = (p.status || "novo").toLowerCase();
 
       if (statusFiltro !== "todos" && status !== statusFiltro) {
         return;
+      }
+
+      if (busca) {
+
+          const numero = String(p.numeroPedido || "")
+              .padStart(6, "0");
+
+          const nome = (p.nomeCliente || "").toLowerCase();
+
+          const telefone = (p.contatoCliente || "")
+              .replace(/\D/g, "");
+
+          const pesquisa = busca.replace(/\D/g, "");
+
+          const encontrado =
+              numero.includes(busca) ||
+              nome.includes(busca) ||
+              telefone.includes(pesquisa);
+
+          if (!encontrado) return;
+
       }
 
       encontrou = true;
@@ -3069,18 +3899,59 @@ window.filtrarPedidosAdmin = function (statusFiltro = "todos") {
       if (status === "novo") {
         corStatus = "#8a6d00";
         fundoStatus = "#fff7d6";
-      } else if (status === "separando") {
+      } else if (status === "aguardando_pagamento") {
+        corStatus = "#a16207";
+        fundoStatus = "#fef3c7";
+      } else if (status === "confirmado") {
+        corStatus = "#166534";
+        fundoStatus = "#dcfce7";
+      } else if (status === "separacao") {
         corStatus = "#9a4d00";
         fundoStatus = "#ffe8cc";
       } else if (status === "pronto") {
         corStatus = "#0b5394";
         fundoStatus = "#d9ecff";
-      } else if (status === "entregue") {
+      } else if (status === "concluido") {
         corStatus = "#0f6b2f";
         fundoStatus = "#dff7e5";
       } else if (status === "cancelado") {
         corStatus = "#a61b1b";
         fundoStatus = "#ffe0e0";
+      }
+
+      let textoStatus = "";
+
+      switch (status) {
+        case "novo":
+          textoStatus = "🟡 Novo";
+          break;
+
+        case "aguardando_pagamento":
+          textoStatus = "💰 Aguardando Pagamento";
+          break;
+
+        case "confirmado":
+          textoStatus = "✔ Pagamento Confirmado";
+          break;
+
+        case "separacao":
+          textoStatus = "📦 Em Separação";
+          break;
+
+        case "pronto":
+          textoStatus = "📍 Pronto para Retirada / Uber Flash";
+          break;
+
+        case "concluido":
+          textoStatus = "✅ Concluído";
+          break;
+
+        case "cancelado":
+          textoStatus = "❌ Cancelado";
+          break;
+
+        default:
+          textoStatus = status;
       }
 
       const botaoStyle = `
@@ -3109,10 +3980,10 @@ window.filtrarPedidosAdmin = function (statusFiltro = "todos") {
             margin-bottom:10px;
             text-transform:capitalize;
           ">
-            ${status}
+            ${textoStatus}
           </div><br>
 
-          <b>Data:</b> ${dataPedido}<br>
+          <b>Pedido:</b> #${String(p.numeroPedido || 0).padStart(6, "0")}<br>
           <b>Data:</b> ${dataPedido}<br>
           <b>Cliente:</b> ${p.nomeCliente || "-"}<br>
           <b>Contato:</b> ${p.contatoCliente || "-"}<br>
@@ -3122,12 +3993,101 @@ window.filtrarPedidosAdmin = function (statusFiltro = "todos") {
 
           <b>Itens:</b><br>${itens}<br><br>
 
+          <div style="
+              background:#f8f9fa;
+              border:1px solid #ddd;
+              border-radius:8px;
+              padding:10px;
+              margin-bottom:12px;
+          ">
+
+          <b>📱 Histórico WhatsApp</b><br><br>
+
+          ${mostrarHistoricoWhatsapp(p)}
+
+          </div>
+
+         <div style="margin-bottom:12px; display:flex; gap:8px; flex-wrap:wrap;">
+
+            <button
+                style="
+                    background:#2563eb;
+                    color:#fff;
+                    border:none;
+                    padding:8px 12px;
+                    border-radius:6px;
+                    cursor:pointer;
+                    font-weight:bold;
+                "
+                onclick="enviarMensagemPedido('${docSnap.id}')"
+            >
+                🔄 Reenviar Mensagem
+            </button>
+
+          </div>
+
           <div style="display:flex; gap:8px; flex-wrap:wrap;">
-            <button style="${botaoStyle}" onclick="atualizarStatusPedido('${docSnap.id}','novo')">🟡 Novo</button>
-            <button style="${botaoStyle}" onclick="atualizarStatusPedido('${docSnap.id}','separando')">🟠 Separando</button>
-            <button style="${botaoStyle}" onclick="atualizarStatusPedido('${docSnap.id}','pronto')">🔵 Pronto</button>
-            <button style="${botaoStyle}" onclick="atualizarStatusPedido('${docSnap.id}','entregue')">🟢 Entregue</button>
-            <button style="${botaoStyle}" onclick="atualizarStatusPedido('${docSnap.id}','cancelado')">🔴 Cancelado</button>
+
+          ${status === "novo" ? `
+              <button style="${botaoStyle}" onclick="atualizarStatusPedido('${docSnap.id}','aguardando_pagamento')">
+                  💰 Aguardar Pagamento
+              </button>
+
+              <button style="${botaoStyle}" onclick="atualizarStatusPedido('${docSnap.id}','cancelado')">
+                  ❌ Cancelar
+              </button>
+          ` : ""}
+
+          ${status === "aguardando_pagamento" ? `
+              <button style="${botaoStyle}" onclick="atualizarStatusPedido('${docSnap.id}','confirmado')">
+                  ✔ Confirmar Pagamento
+              </button>
+
+              <button style="${botaoStyle}" onclick="atualizarStatusPedido('${docSnap.id}','cancelado')">
+                  ❌ Cancelar
+              </button>
+          ` : ""}
+
+          ${status === "confirmado" ? `
+              <button style="${botaoStyle}" onclick="atualizarStatusPedido('${docSnap.id}','separacao')">
+                  📦 Iniciar Separação
+              </button>
+
+              <button style="${botaoStyle}" onclick="atualizarStatusPedido('${docSnap.id}','cancelado')">
+                  ❌ Cancelar
+              </button>
+          ` : ""}
+
+          ${status === "separacao" ? `
+              <button style="${botaoStyle}" onclick="atualizarStatusPedido('${docSnap.id}','pronto')">
+                  📍 Pedido Pronto
+              </button>
+          ` : ""}
+
+          ${status === "pronto" ? `
+              <button style="${botaoStyle}" onclick="atualizarStatusPedido('${docSnap.id}','concluido')">
+                  ✅ Concluir Pedido
+              </button>
+          ` : ""}
+
+          ${status === "concluido" ? `
+              <div style="
+                  color:#16a34a;
+                  font-weight:bold;
+              ">
+                  ✔ Pedido concluído
+              </div>
+          ` : ""}
+
+          ${status === "cancelado" ? `
+              <div style="
+                  color:#dc2626;
+                  font-weight:bold;
+              ">
+                  ❌ Pedido cancelado
+              </div>
+          ` : ""}
+
           </div>
         </div>
       `;
@@ -3172,6 +4132,17 @@ window.criarProduto = async function () {
   let nome = document.getElementById("novo_nome").value.trim();
   let marca = document.getElementById("novo_marca").value.trim() || "";
   let categoria = document.getElementById("novaCategoria").value.trim() || "";
+  let categoriasAdicionaisTexto =
+  document.getElementById("novasCategoriasAdicionais")?.value.trim() || "";
+
+  let categoriasAdicionais = [
+    ...new Set(
+      categoriasAdicionaisTexto
+        .split(",")
+        .map(c => c.trim())
+        .filter(Boolean)
+    )
+  ];
   let preco = parseFloat(document.getElementById("novo_preco").value);
   let pasta = document.getElementById("novo_pasta").value.trim() || "";
   let imagem = document.getElementById("novo_imagem").value.trim() || "";
@@ -3206,6 +4177,7 @@ window.criarProduto = async function () {
     nome,
     marca,
     categoria,
+    categoriasAdicionais,
     promocao,
     preco,
     ativo: true,
@@ -3230,7 +4202,7 @@ window.criarProduto = async function () {
 
 window.salvarEdicaoProdutos = async function () {
   try {
-    // 1) Congela a lista atual para não depender da reordenação do onSnapshot
+
     const produtosAtuais = [...produtos];
 
     // 2) Lê TODOS os dados da tela antes de começar a salvar
@@ -3238,6 +4210,17 @@ window.salvarEdicaoProdutos = async function () {
       let nome = document.getElementById(`p_nome_${index}`)?.value.trim() || "";
       let marca = document.getElementById(`p_marca_${index}`)?.value.trim() || "";
       let categoria = document.getElementById(`p_categoria_${index}`)?.value.trim() || "";
+      let categoriasAdicionaisTexto =
+        document.getElementById(`p_categoriasAdicionais_${index}`)?.value.trim() || "";
+
+      let categoriasAdicionais = [
+        ...new Set(
+          categoriasAdicionaisTexto
+            .split(",")
+            .map(c => c.trim())
+            .filter(Boolean)
+        )
+      ];
       let promocao = document.getElementById(`p_promocao_${index}`)?.checked || false;
       let ativo =
         document.getElementById(`p_ativo_${index}`)?.checked ?? true;
@@ -3277,6 +4260,7 @@ window.salvarEdicaoProdutos = async function () {
         nome,
         marca,
         categoria,
+        categoriasAdicionais,
         promocao,
         ativo,
         preco,
@@ -3296,6 +4280,7 @@ window.salvarEdicaoProdutos = async function () {
         nome: item.nome,
         marca: item.marca,
         categoria: item.categoria,
+        categoriasAdicionais: item.categoriasAdicionais,
         promocao: item.promocao,
         ativo: item.ativo,
         preco: item.preco,
@@ -3307,6 +4292,7 @@ window.salvarEdicaoProdutos = async function () {
         opcoes: item.opcoes,
         estoque: item.estoque
       });
+
     }
 
     alert("Produtos e estoques atualizados com sucesso!");
@@ -3363,7 +4349,15 @@ window.onload = async function () {
   atualizarBannerAviso();
 };
 
-setInterval(limparReservas, 5000);
+setInterval(() => {
+
+  if (carrinho.length === 0) {
+    return;
+  }
+
+  limparReservas();
+
+}, 5000);
 
 
 
