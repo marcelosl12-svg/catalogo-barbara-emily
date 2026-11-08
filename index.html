@@ -439,6 +439,8 @@ font-weight:bold;
 
   let reservasProcessando = new Set();
 
+  let limpandoCarrinho = false;
+
  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js";
 
 import {
@@ -534,6 +536,20 @@ async function carregarConfigLoja() {
     ...configLoja,
     ...snap.data()
   };
+
+  configLoja.descontoPix = Number(configLoja.descontoPix ?? 5);
+  configLoja.minimoPix = Number(configLoja.minimoPix ?? 50);
+
+  const campoDescontoPix = document.getElementById("descontoPixAdmin");
+  const campoMinimoPix = document.getElementById("minimoPixAdmin");
+
+  if (campoDescontoPix) {
+    campoDescontoPix.value = configLoja.descontoPix;
+  }
+
+  if (campoMinimoPix) {
+    campoMinimoPix.value = configLoja.minimoPix;
+  }
 
   if (document.getElementById("bannerAtivo")) {
 
@@ -1175,7 +1191,7 @@ function atualizarCarrinho() {
 
   if (!lista || !pagamentoSelect || !entregaSelect || !totalEl || !badgeEl) return;
 
-  lista.innerHTML = "";
+  let htmlLista = "";
 
   let subtotal = 0;
   let subtotalElegivelPix = 0;
@@ -1191,7 +1207,7 @@ function atualizarCarrinho() {
       subtotalElegivelPix += sub;
     }
 
-    lista.innerHTML += `
+    htmlLista += `
       <div class="cartItem">
         <div>
           ${item.nome}<br>
@@ -1235,7 +1251,7 @@ if (pagamento === "PIX" && subtotalElegivelPix >= minimoPix) {
 
   let total = subtotal + taxa - desconto;
 
-  lista.innerHTML += `
+  htmlLista += `
     <div style="margin-top:12px; border-top:1px solid #ddd; padding-top:10px;">
       <div>Subtotal: R$ ${subtotal.toFixed(2)}</div>
       <div>Entrega: R$ ${taxa.toFixed(2)}</div>
@@ -1258,6 +1274,7 @@ if (pagamento === "PIX" && subtotalElegivelPix >= minimoPix) {
     </div>
   `;
 
+  lista.innerHTML = htmlLista;
   totalEl.innerText = total.toFixed(2);
   badgeEl.innerText = qtd;
 }
@@ -1617,8 +1634,14 @@ window.remover = async function(index) {
 };
 
 window.limparCarrinho = async function() {
+  if (limpandoCarrinho) return;
+
+  limpandoCarrinho = true;
+
   try {
-    for (let item of carrinho) {
+    const itensParaLimpar = [...carrinho];
+
+    for (const item of itensParaLimpar) {
       await expirarReserva(item);
     }
 
@@ -1638,24 +1661,23 @@ window.limparCarrinho = async function() {
 
     const bairro = document.getElementById("bairroEntrega");
 
-      if (bairro) {
-        bairro.selectedIndex = 0;
-      }
+    if (bairro) bairro.selectedIndex = 0;
 
-      const areaBairro =
-        document.getElementById("areaBairroEntrega");
+    const areaBairro = document.getElementById("areaBairroEntrega");
 
-      if (areaBairro) {
-        areaBairro.style.display = "none";
-      }
+    if (areaBairro) areaBairro.style.display = "none";
 
-      taxaEntregaBairro = 0;
+    taxaEntregaBairro = 0;
 
     atualizarCarrinho();
     salvarCarrinhoLocal();
+
   } catch (erro) {
     console.error("Erro ao limpar carrinho:", erro);
     alert("Erro ao devolver estoque.");
+
+  } finally {
+    limpandoCarrinho = false;
   }
 };
 
@@ -2658,6 +2680,7 @@ async function expirarReserva(item) {
 }
 
 async function limparReservas() {
+  if (limpandoCarrinho) return;
   let agora = Date.now();
   let mudou = false;
 
@@ -2885,12 +2908,27 @@ window.renderDashboardAdmin = function () {
 
       <label>
         Desconto no PIX (%):
-        <input type="number" id="descontoPixAdmin" value="${configLoja.descontoPix}" style="width:100%; margin-top:6px;">
+        <input
+          type="number"
+          id="descontoPixAdmin"
+          min="0"
+          max="100"
+          step="0.01"
+          value="${Number(configLoja.descontoPix ?? 5)}"
+          style="width:100%; margin-top:6px;"
+        >
       </label>
 
       <label style="display:block; margin-top:10px;">
         Valor mínimo para desconto PIX:
-        <input type="number" id="minimoPixAdmin" value="${configLoja.minimoPix}" style="width:100%; margin-top:6px;">
+        <input
+          type="number"
+          id="minimoPixAdmin"
+          min="0"
+          step="0.01"
+          value="${Number(configLoja.minimoPix ?? 50)}"
+          style="width:100%; margin-top:6px;"
+        >
       </label>
 
       <label>
@@ -2977,13 +3015,30 @@ window.salvarConfigLoja = async function () {
 
     console.log("CLICOU EM SALVAR");
 
-    let desconto = parseFloat(
-      document.getElementById("descontoPixAdmin")?.value || 0
+    const desconto = Number(
+      document.getElementById("descontoPixAdmin").value
     );
 
-    let minimo = parseFloat(
-      document.getElementById("minimoPixAdmin")?.value || 0
+    const minimo = Number(
+      document.getElementById("minimoPixAdmin").value
     );
+
+    if (
+      !Number.isFinite(desconto) ||
+      desconto < 0 ||
+      desconto > 100
+    ) {
+      alert("Informe uma porcentagem entre 0 e 100.");
+      return;
+    }
+
+    if (!Number.isFinite(minimo) || minimo < 0) {
+      alert("Informe um valor mínimo válido.");
+      return;
+    }
+
+    configLoja.descontoPix = desconto;
+    configLoja.minimoPix = minimo;
 
     configLoja.liveAtiva =
       document.getElementById("liveAtivaAdmin").checked;
