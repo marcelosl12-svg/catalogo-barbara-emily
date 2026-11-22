@@ -457,6 +457,7 @@ import {
   serverTimestamp,
   query,
   orderBy,
+  where,
   getDoc,
   setDoc
 } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js";
@@ -891,19 +892,22 @@ window.voltarAoTopo = function () {
 
 };
 
+let botaoTopoVisivel = false;
+
 window.addEventListener("scroll", () => {
 
-  const btn = document.getElementById("btnTopo");
+  const deveMostrar = window.scrollY > 500;
 
+  // Só altera o DOM quando o botão realmente precisa mudar de estado.
+  if (deveMostrar === botaoTopoVisivel) return;
+
+  const btn = document.getElementById("btnTopo");
   if (!btn) return;
 
-  if (window.scrollY > 500) {
-    btn.style.display = "block";
-  } else {
-    btn.style.display = "none";
-  }
+  botaoTopoVisivel = deveMostrar;
+  btn.style.display = deveMostrar ? "block" : "none";
 
-});
+}, { passive: true });
 
 function atualizarBannerAviso() {
 
@@ -1285,12 +1289,10 @@ function configurarEventosCarrinho() {
 
   if (pagamentoSelect) {
     pagamentoSelect.addEventListener("change", atualizarCarrinho);
-    pagamentoSelect.addEventListener("input", atualizarCarrinho);
   }
 
   if (entregaSelect) {
     entregaSelect.addEventListener("change", atualizarFormasPagamento);
-    entregaSelect.addEventListener("input", atualizarFormasPagamento);
   }
 }
 
@@ -1678,148 +1680,6 @@ window.limparCarrinho = async function() {
 
   } finally {
     limpandoCarrinho = false;
-  }
-};
-
-window.gerarPedido = async function () {
-
-  if (carrinho.length === 0) {
-    alert("Carrinho vazio");
-    return;
-  }
-
-  let nomeCliente = document.getElementById("nomeCliente").value.trim();
-  let contatoCliente = document.getElementById("contatoCliente").value.trim();
-  let observacoes = document.getElementById("observacoesPedido").value.trim();
-
-  if (!nomeCliente) {
-    alert("Informe seu nome.");
-    return;
-  }
-
-  if (!contatoCliente) {
-    alert("Informe seu contato.");
-    return;
-  }
-
-  let pagamento = document.getElementById("pagamento").value;
-  let entregaSelect = document.getElementById("entrega");
-  let entregaTexto = entregaSelect.options[entregaSelect.selectedIndex].text;
-  
-  let taxa = 0;
-
-if (entregaSelect.value === "loja") {
-
-  const bairro =
-    document.getElementById("bairroEntrega").value;
-
-  if (!bairro) {
-    alert("Selecione seu bairro.");
-    return;
-  }
-
-  taxa =
-    Number(configLoja.taxasEntrega?.[bairro] || 0);
-
-} else {
-
-  taxa =
-    parseFloat(entregaSelect.value || 0);
-}
-
-  if (!pagamento) {
-    alert("Selecione a forma de pagamento.");
-    return;
-  }
-
-  if (!entregaTexto || entregaTexto === "Opções de entrega") {
-    alert("Selecione a opção de entrega.");
-    return;
-  }
-
-  let texto = "Pedido\n\n";
-    texto += `Cliente: ${nomeCliente}\n`;
-    texto += `Contato: ${contatoCliente}\n\n`;
-
-  let subtotal = 0;
-  let subtotalElegivelPix = 0;
-
-  carrinho.forEach(i => {
-    let sub = i.preco * i.qtd;
-    subtotal += sub;
-
-    if (!i.promocao) {
-      subtotalElegivelPix += sub;
-    }
-
-    texto += `${i.nome}\n${i.qtd}Un R$ ${i.preco.toFixed(2)}\n\n`;
-  });
-
-  let desconto = 0;
-  let minimoPix = Number(configLoja.minimoPix || 0);
-  let descontoPix = Number(configLoja.descontoPix || 0);
-
-  if (
-    pagamento.toLowerCase() === "pix" &&
-    subtotalElegivelPix >= minimoPix
-  ) {
-    desconto = subtotalElegivelPix * (descontoPix / 100);
-  }
-
-  let total = subtotal + taxa - desconto;
-
-  if (observacoes) {
-    texto += `OBSERVAÇÕES\n${observacoes}\n\n`;
-  }
-
-  texto += `Subtotal: R$ ${subtotal.toFixed(2)}\n`;
-  texto += `Entrega: ${entregaTexto}\n`;
-  texto += `Taxa: R$ ${taxa.toFixed(2)}\n`;
-
-  if (desconto > 0) {
-    texto += `Desconto PIX (${descontoPix}%): - R$ ${desconto.toFixed(2)}\n`;
-  } else if (pagamento.toLowerCase() === "pix" && subtotalElegivelPix < minimoPix) {
-    texto += `Sem desconto PIX (mínimo de R$ ${minimoPix.toFixed(2)} em produtos elegíveis)\n`;
-  }
-
-  texto += `Pagamento: ${pagamento}\n`;
-  texto += `Total: R$ ${total.toFixed(2)}`;
-
-  try {
-    await salvarPedidoFirebaseComDesconto(
-      subtotal,
-      subtotalElegivelPix,
-      taxa,
-      desconto,
-      total,
-      pagamento,
-      entregaTexto,
-      nomeCliente,
-      contatoCliente,
-      enderecoEntrega
-    );
-
-    document.getElementById("pedido").value = texto;
-    await navigator.clipboard.writeText(texto);
-
-    alert("Pedido salvo no Firebase e copiado!");
-
-    carrinho = [];
-    salvarCarrinhoLocal();
-
-    // limpa os campos para não “grudar” a compra anterior
-    let pagamentoSelect = document.getElementById("pagamento");
-    let entregaSelect = document.getElementById("entrega");
-    let pedidoEl = document.getElementById("pedido");
-
-    if (pagamentoSelect) pagamentoSelect.selectedIndex = 0;
-    if (entregaSelect) entregaSelect.selectedIndex = 0;
-    if (pedidoEl) pedidoEl.value = "";
-
-  atualizarCarrinho();
-  } catch (erro) {
-    console.error("Erro ao gerar pedido:", erro);
-    alert("Erro ao salvar pedido.");
   }
 };
 
@@ -2825,6 +2685,13 @@ window.mostrarSecaoAdmin = function (secao) {
   let container = document.getElementById("adminConteudoPrincipal");
   if (!container) return;
 
+  // Encerra a escuta do Dashboard ao abrir outra seção do painel.
+  if (secao !== "dashboard" && unsubscribeDashboardVendas) {
+    unsubscribeDashboardVendas();
+    unsubscribeDashboardVendas = null;
+    pedidosDashboardCache = [];
+  }
+
   if (secao === "dashboard") {
     window.renderDashboardAdmin();
     return;
@@ -2846,34 +2713,6 @@ window.toggleProdutoAdmin = function (id) {
   if (!box) return;
 
   box.style.display = box.style.display === "none" ? "block" : "none";
-};
-
-window.filtrarProdutosAdmin = function () {
-  let busca = document.getElementById("buscaProdutoAdmin")?.value.toLowerCase() || "";
-  let cards = document.querySelectorAll(".cardProdutoAdmin");
-  let totalVisivel = 0;
-
-  cards.forEach(card => {
-    let nome = card.getAttribute("data-nome") || "";
-    let categoria = card.getAttribute("data-categoria") || "";
-
-    let passaBusca = nome.includes(busca);
-    let passaCategoria =
-      window.categoriaFiltroAtual === "todos" ||
-      categoria === window.categoriaFiltroAtual;
-
-    if (passaBusca && passaCategoria) {
-      card.style.display = "block";
-      totalVisivel++;
-    } else {
-      card.style.display = "none";
-    }
-  });
-
-  let contador = document.getElementById("contadorProdutosAdmin");
-  if (contador) {
-    contador.innerHTML = `Total: ${produtos.length} | Mostrando: ${totalVisivel}`;
-  }
 };
 
 window.renderDashboardAdmin = function () {
@@ -3106,155 +2945,171 @@ window.salvarConfigLoja = async function () {
 };
 
 let unsubscribeDashboardVendas = null;
+let pedidosDashboardCache = [];
+let periodoDashboardAtual = "total";
 
-window.dashboardVendas = function (periodo = "total") {
+function renderizarDashboardVendas(periodo = "total") {
 
-  const pedidosRef = collection(db, "Pedidos");
+  let totalPedidos = 0;
+  let faturamento = 0;
+  let produtosVendidos = {};
+  let pedidosPendentes = 0;
 
-    if (unsubscribeDashboardVendas) {
-      unsubscribeDashboardVendas();
+  const agora = new Date();
+
+  pedidosDashboardCache.forEach(pedido => {
+
+    if (pedido.status !== "concluido") {
+      pedidosPendentes++;
+      return;
     }
 
-    unsubscribeDashboardVendas = onSnapshot(pedidosRef, (snapshot) => {
+    if (!pedido.criadoEm) return;
 
-    let totalPedidos = 0;
-    let faturamento = 0;
-    let produtosVendidos = {};
-    let pedidosPendentes = 0;
+    let dataPedido;
 
-    const agora = new Date();
+    if (pedido.criadoEm.toDate) {
+      dataPedido = pedido.criadoEm.toDate();
+    } else {
+      dataPedido = new Date(pedido.criadoEm);
+    }
 
-    snapshot.forEach(docSnap => {
+    let incluir = true;
 
-      let pedido = docSnap.data();
+    if (periodo === "hoje") {
 
-      if (pedido.status !== "concluido") {
-        pedidosPendentes++;
-        return;
-      }
+      incluir =
+        dataPedido.getDate() === agora.getDate() &&
+        dataPedido.getMonth() === agora.getMonth() &&
+        dataPedido.getFullYear() === agora.getFullYear();
 
-      if (!pedido.criadoEm) return;
+    } else if (periodo === "7dias") {
 
-      let dataPedido;
+      let limite = new Date();
+      limite.setDate(limite.getDate() - 7);
 
-      if (pedido.criadoEm.toDate) {
-        dataPedido = pedido.criadoEm.toDate();
-      } else {
-        dataPedido = new Date(pedido.criadoEm);
-      }
+      incluir = dataPedido >= limite;
 
-      let incluir = true;
+    } else if (periodo === "30dias") {
 
-      if (periodo === "hoje") {
+      let limite = new Date();
+      limite.setDate(limite.getDate() - 30);
 
-        incluir =
-          dataPedido.getDate() === agora.getDate() &&
-          dataPedido.getMonth() === agora.getMonth() &&
-          dataPedido.getFullYear() === agora.getFullYear();
+      incluir = dataPedido >= limite;
+    }
 
-      } else if (periodo === "7dias") {
+    if (!incluir) return;
 
-        let limite = new Date();
-        limite.setDate(limite.getDate() - 7);
+    totalPedidos++;
+    faturamento += Number(pedido.total || 0);
 
-        incluir = dataPedido >= limite;
+    let itensPedido = Array.isArray(pedido.itens)
+      ? pedido.itens
+      : [];
 
-      } else if (periodo === "30dias") {
+    itensPedido.forEach(item => {
 
-        let limite = new Date();
-        limite.setDate(limite.getDate() - 30);
+      let nome = item.nome || "Produto";
+      let qtd = Number(item.qtd || 0);
 
-        incluir = dataPedido >= limite;
-      }
-
-      if (!incluir) return;
-
-      totalPedidos++;
-      faturamento += Number(pedido.total || 0);
-
-      let itensPedido = Array.isArray(pedido.itens)
-        ? pedido.itens
-        : [];
-
-      itensPedido.forEach(item => {
-
-        let nome = item.nome || "Produto";
-
-        let qtd = Number(item.qtd || 0);
-
-        produtosVendidos[nome] =
-          (produtosVendidos[nome] || 0) + qtd;
-      });
-
+      produtosVendidos[nome] =
+        (produtosVendidos[nome] || 0) + qtd;
     });
-
-    let ranking = Object.entries(produtosVendidos)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 5);
-
-    let rankingHTML = ranking.length
-      ? ranking.map((item, index) => `
-        <p style="margin:6px 0;">
-          ${index + 1}º 🏆 ${item[0]} — ${item[1]} vendas
-        </p>
-      `).join("")
-      : "<p>Nenhuma venda encontrada</p>";
-
-    let graficoHTML = ranking.map(item => {
-
-      let largura = item[1] * 20;
-
-      return `
-        <div style="margin:10px 0;">
-          <div style="font-size:14px;margin-bottom:4px;">
-            ${item[0]} (${item[1]})
-          </div>
-
-          <div style="
-            height:22px;
-            width:${largura}px;
-            background:linear-gradient(90deg,#7c3aed,#c084fc);
-            border-radius:6px;
-          "></div>
-        </div>
-      `;
-
-    }).join("");
-
-    let box = document.getElementById("dashboardVendas");
-
-    if (!box) return;
-
-    box.innerHTML = `
-      <h2>📊 Dashboard (${periodo})</h2>
-
-      <p>📦 Pedidos: ${totalPedidos}</p>
-
-      <p>⏳ Pedidos Pendentes: ${pedidosPendentes}</p>
-
-      <p>💰 Faturamento: R$ ${faturamento.toFixed(2)}</p>
-
-      <h3 style="margin-top:20px;">
-        🏆 Top 5 Produtos
-      </h3>
-
-      ${rankingHTML}
-
-      <h3 style="margin-top:24px;">
-        📈 Gráfico de vendas
-      </h3>
-
-      ${graficoHTML || "<p>Sem dados</p>"}
-    `;
 
   });
 
-};
+  let ranking = Object.entries(produtosVendidos)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5);
 
+  let rankingHTML = ranking.length
+    ? ranking.map((item, index) => `
+      <p style="margin:6px 0;">
+        ${index + 1}º 🏆 ${item[0]} — ${item[1]} vendas
+      </p>
+    `).join("")
+    : "<p>Nenhuma venda encontrada</p>";
+
+  let graficoHTML = ranking.map(item => {
+
+    let largura = item[1] * 20;
+
+    return `
+      <div style="margin:10px 0;">
+        <div style="font-size:14px;margin-bottom:4px;">
+          ${item[0]} (${item[1]})
+        </div>
+
+        <div style="
+          height:22px;
+          width:${largura}px;
+          background:linear-gradient(90deg,#7c3aed,#c084fc);
+          border-radius:6px;
+        "></div>
+      </div>
+    `;
+
+  }).join("");
+
+  let box = document.getElementById("dashboardVendas");
+
+  if (!box) return;
+
+  box.innerHTML = `
+    <h2>📊 Dashboard (${periodo})</h2>
+
+    <p>📦 Pedidos: ${totalPedidos}</p>
+
+    <p>⏳ Pedidos Pendentes: ${pedidosPendentes}</p>
+
+    <p>💰 Faturamento: R$ ${faturamento.toFixed(2)}</p>
+
+    <h3 style="margin-top:20px;">
+      🏆 Top 5 Produtos
+    </h3>
+
+    ${rankingHTML}
+
+    <h3 style="margin-top:24px;">
+      📈 Gráfico de vendas
+    </h3>
+
+    ${graficoHTML || "<p>Sem dados</p>"}
+  `;
+}
+
+window.dashboardVendas = function (periodo = "total") {
+
+  periodoDashboardAtual = periodo;
+
+  // Reaproveita os dados recebidos enquanto a consulta estiver ativa.
+  if (unsubscribeDashboardVendas) {
+    renderizarDashboardVendas(periodoDashboardAtual);
+    return;
+  }
+
+  const pedidosRef = collection(db, "Pedidos");
+
+  unsubscribeDashboardVendas = onSnapshot(pedidosRef, (snapshot) => {
+
+    pedidosDashboardCache = snapshot.docs.map(docSnap => docSnap.data());
+    renderizarDashboardVendas(periodoDashboardAtual);
+
+  }, (erro) => {
+    console.error("Erro ao carregar Dashboard:", erro);
+    const box = document.getElementById("dashboardVendas");
+    if (box) box.textContent = "Erro ao carregar o Dashboard. Veja o console.";
+  });
+};
 
 window.exportarRelatorioCSV = async function () {
   try {
-    const snapshot = await getDocs(collection(db, "Pedidos"));
+    const pedidosConcluidosRef = query(
+      collection(db, "Pedidos"),
+      where("status", "==", "concluido")
+    );
+
+    const snapshot = await getDocs(pedidosConcluidosRef);
 
     let linhas = [
       ["Data", "Pagamento", "Entrega", "Total", "Itens"]
@@ -3638,6 +3493,8 @@ window.renderSecaoProdutosAdmin = function () {
           <div style="margin-top:8px;">
           <img
             src="imagens/${p.pasta}/${p.imagem}"
+            loading="lazy"
+            decoding="async"
             style="
               width:80px;
               height:80px;
@@ -3769,7 +3626,7 @@ window.renderSecaoPedidosAdmin = function () {
           border-radius:8px;
           font-size:15px;
         "
-        oninput="filtrarPedidosAdmin(statusFiltroPedidosAtual)"
+        oninput="buscarPedidosAdmin()"
       >
     </div>
 
@@ -3787,24 +3644,21 @@ window.apagarPedidosCancelados = async function () {
 
   try {
 
-    const snapshot = await getDocs(
-      collection(db, "Pedidos")
+    const pedidosCanceladosRef = query(
+      collection(db, "Pedidos"),
+      where("status", "==", "cancelado")
     );
+
+    const snapshot = await getDocs(pedidosCanceladosRef);
 
     let apagados = 0;
 
     for (const docSnap of snapshot.docs) {
+      await deleteDoc(
+        doc(db, "Pedidos", docSnap.id)
+      );
 
-      const pedido = docSnap.data();
-
-      if (pedido.status === "cancelado") {
-
-        await deleteDoc(
-          doc(db, "Pedidos", docSnap.id)
-        );
-
-        apagados++;
-      }
+      apagados++;
     }
 
     alert(`${apagados} pedidos cancelados removidos.`);
@@ -3878,6 +3732,10 @@ function mostrarHistoricoWhatsapp(pedido){
 
 }
 
+window.buscarPedidosAdmin = function () {
+  window.filtrarPedidosAdmin(statusFiltroPedidosAtual);
+};
+
 window.filtrarPedidosAdmin = function (statusFiltro = "todos") {
   statusFiltroPedidosAtual = statusFiltro;
 
@@ -3919,20 +3777,25 @@ window.filtrarPedidosAdmin = function (statusFiltro = "todos") {
 
       if (busca) {
 
-          const numero = String(p.numeroPedido || "")
-              .padStart(6, "0");
+          const normalizarTexto = (valor) =>
+              String(valor || "")
+                  .normalize("NFD")
+                  .replace(/[\u0300-\u036f]/g, "")
+                  .toLowerCase()
+                  .trim();
 
-          const nome = (p.nomeCliente || "").toLowerCase();
-
-          const telefone = (p.contatoCliente || "")
-              .replace(/\D/g, "");
-
-          const pesquisa = busca.replace(/\D/g, "");
+          const termo = normalizarTexto(busca);
+          const numeroBruto = String(p.numeroPedido || "");
+          const numero = numeroBruto.padStart(6, "0");
+          const nome = normalizarTexto(p.nomeCliente);
+          const telefone = String(p.contatoCliente || "").replace(/\D/g, "");
+          const pesquisaNumerica = busca.replace(/\D/g, "");
 
           const encontrado =
-              numero.includes(busca) ||
-              nome.includes(busca) ||
-              telefone.includes(pesquisa);
+              normalizarTexto(numero).includes(termo) ||
+              normalizarTexto(numeroBruto).includes(termo) ||
+              nome.includes(termo) ||
+              (pesquisaNumerica.length > 0 && telefone.includes(pesquisaNumerica));
 
           if (!encontrado) return;
 
@@ -4365,7 +4228,7 @@ window.removerProduto = async function (index) {
     let produtoId = produtos[index].id;
     await deleteDoc(doc(db, "Produtos", produtoId));
     alert("Produto removido do Firebase!");
-    await carregarProdutosFirebase();
+    // O onSnapshot já atualiza a lista automaticamente após a exclusão.
     window.fecharAdmin();
   } catch (erro) {
     console.error("Erro ao remover produto:", erro);
@@ -4377,6 +4240,12 @@ window.fecharAdmin = function () {
   if (unsubscribePedidosAdmin) {
     unsubscribePedidosAdmin();
     unsubscribePedidosAdmin = null;
+  }
+
+  if (unsubscribeDashboardVendas) {
+    unsubscribeDashboardVendas();
+    unsubscribeDashboardVendas = null;
+    pedidosDashboardCache = [];
   }
 
   if (window.painelAdmin) {
