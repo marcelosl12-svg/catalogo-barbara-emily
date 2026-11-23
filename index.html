@@ -6,46 +6,110 @@
 
 <title>Catálogo Bárbara Emily</title>
 
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+
 <style>
-
-body{
-font-family:Arial;
-margin:0;
-background:#f3f3f3;
+:root{
+  --bg:#fffaf7;--cream:#f6eae6;--deep:#5b0f18;--muted:#e9d9d7;
+  --text:#2b2b2b;--accent:#7a1b24;--soft:#594a49;
 }
-
-
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  font-family:Inter,system-ui,Arial,sans-serif;
+  margin:0;
+  background:var(--bg);
+  color:var(--text);
+  line-height:1.5;
+}
+button{font-family:inherit}
+:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
 
 /* HEADER */
-
 header{
-background:linear-gradient(45deg,#8b0000);
-color:white;
-display:flex;
-align-items:center;
-justify-content:space-between;
-padding:12px 15px;
-box-shadow:0 3px 10px rgba(0,0,0,0.2);
+  background:var(--bg);
+  color:var(--deep);
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:14px 20px;
+  border-bottom:1px solid var(--muted);
+}
+.logoArea{display:flex;align-items:center;gap:12px}
+.logo{width:42px;height:42px;border-radius:50%;object-fit:cover}
+.titulo{
+  font-family:'Playfair Display',serif;
+  font-size:clamp(16px,4.2vw,22px);
+  font-weight:700;
+  letter-spacing:.04em;
 }
 
-.logoArea{
-display:flex;
-align-items:center;
-gap:10px;
+/* HERO */
+.hero{
+  max-width:1100px;
+  margin:20px auto 8px;
+  padding:0 20px;
+}
+.hero-card{
+  display:grid;
+  grid-template-columns:1fr 42%;
+  min-height:250px;
+  border-radius:12px;
+  overflow:hidden;
+  background:linear-gradient(180deg,rgba(91,15,24,.95),rgba(91,15,24,.86));
+  color:#fff;
+}
+.hero.sem-foto .hero-card{grid-template-columns:1fr}
+.hero.sem-foto .hero-right{display:none}
+.hero-left{
+  padding:36px;
+  display:flex;
+  flex-direction:column;
+  align-items:flex-start;
+  justify-content:center;
+}
+.hero-brand{
+  font-family:'Playfair Display',serif;
+  font-size:clamp(30px,6vw,44px);
+  line-height:1.1;
+  margin:0;
+}
+.hero-tag{font-size:17px;margin:10px 0 20px}
+.hero-cta{
+  display:inline-block;
+  background:#fff;
+  color:var(--deep);
+  padding:10px 20px;
+  border-radius:999px;
+  text-decoration:none;
+  font-weight:600;
+}
+.hero-cta:hover{background:var(--cream)}
+.hero-right{position:relative;min-height:250px}
+.hero-image{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  display:block;
+  /* a imagem "derrete" no vinho do banner */
+  -webkit-mask-image:linear-gradient(to right,transparent 0,#000 40%);
+  mask-image:linear-gradient(to right,transparent 0,#000 40%);
+}
+/* imagem inteira (arte da promoção com texto): sem desbotar as bordas */
+.hero.img-inteira .hero-image{
+  inset:12px;
+  width:calc(100% - 24px);
+  height:calc(100% - 24px);
+  object-fit:contain;
+  -webkit-mask-image:none;
+  mask-image:none;
 }
 
-.logo{
-width:40px;
-height:40px;
-border-radius:50%;
-}
-
-.stock{
-font-size:14px;
-line-height:1.5;
-margin-top:5px;
-}
-
+/* AVISO */
 #bannerAviso{
   display:none;
   width:100%;
@@ -54,246 +118,255 @@ margin-top:5px;
   font-weight:bold;
   box-sizing:border-box;
 }
+@keyframes piscarBanner{0%{opacity:1}50%{opacity:.8}100%{opacity:1}}
+@keyframes pulsarTexto{0%{transform:scale(1)}50%{transform:scale(1.05)}100%{transform:scale(1)}}
+.bannerTextoPulsando{display:inline-block;animation:pulsarTexto 1.2s infinite}
 
-@keyframes piscarBanner{
-  0%{opacity:1;}
-  50%{opacity:.8;}
-  100%{opacity:1;}
+/* TARJA DE OFERTA */
+.imgBox{position:relative;overflow:hidden;border-radius:8px}
+.fitaOferta{
+  position:absolute;
+  top:0;
+  left:0;
+  width:112px;
+  height:112px;
+  overflow:hidden;
+  pointer-events:none;
+  z-index:3;
+}
+.fitaOferta span{
+  position:absolute;
+  top:24px;
+  left:-36px;
+  width:160px;
+  transform:rotate(-45deg);
+  background:#a31621;
+  color:#fff;
+  font-size:11px;
+  font-weight:700;
+  text-align:center;
+  padding:5px 0;
+  box-shadow:0 2px 5px rgba(0,0,0,.3);
 }
 
-@keyframes pulsarTexto {
-  0% {
-    transform: scale(1);
-  }
+/* PRODUTOS EM DESTAQUE */
+.destaques{max-width:1100px;margin:0 auto;padding:20px 20px 0}
+.destaques[hidden]{display:none}
+.destaques h2{
+  font-family:'Playfair Display',serif;
+  font-size:clamp(20px,4.5vw,26px);
+  color:var(--deep);
+  margin:0 0 4px;
+}
+.destaques .grid{padding:12px 0 8px;margin:0;max-width:none}
+.card.realce{outline:3px solid var(--accent);outline-offset:2px}
+.btn[disabled]{opacity:.5;cursor:not-allowed}
 
-  50% {
-    transform: scale(1.05);
-  }
-
-  100% {
-    transform: scale(1);
-  }
+/* BUSCA E FILTROS */
+.catalogoTopo{max-width:1100px;margin:0 auto;padding:16px 20px 0}
+#buscaCliente{
+  width:100%;
+  padding:12px 16px;
+  border:1px solid var(--muted);
+  border-radius:999px;
+  background:#fff;
+  font-size:15px;
+  margin-bottom:12px;
 }
 
-.bannerTextoPulsando {
-  display: inline-block;
-  animation: pulsarTexto 1.2s infinite;
-}
-
+/* CARRINHO (botão flutuante) */
 .cartBtn{
-position:fixed;
-top:18px;
-right:18px;
-width:45px;
-height:45px;
-border:none;
-border-radius:50%;
-background:#fff;
-box-shadow:0 4px 12px rgba(0,0,0,0.25);
-cursor:pointer;
-z-index:999;
-display:flex;
-align-items:center;
-justify-content:center;
-font-size:26px;
-transition:0.2s;
+  position:fixed;
+  top:14px;
+  right:16px;
+  width:46px;
+  height:46px;
+  border:none;
+  border-radius:50%;
+  background:var(--deep);
+  color:#fff;
+  box-shadow:0 4px 12px rgba(0,0,0,.25);
+  cursor:pointer;
+  z-index:1001;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:22px;
+  transition:transform .2s;
 }
-
-.cartBtn:hover{
-transform:scale(1.05);
-}
-
+.cartBtn:hover{transform:scale(1.05)}
 #cartBadge{
-position:absolute;
-top:-6px;
-right:-4px;
-background:#000;
-color:#fff;
-font-size:12px;
-font-weight:bold;
-width:22px;
-height:22px;
-border-radius:50%;
-display:flex;
-align-items:center;
-justify-content:center;
+  position:absolute;
+  top:-6px;
+  right:-4px;
+  background:#fff;
+  color:var(--deep);
+  border:2px solid var(--deep);
+  font-size:12px;
+  font-weight:bold;
+  width:22px;
+  height:22px;
+  border-radius:50%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
 }
 
 /* PRODUTOS */
-
 .grid{
-display:grid;
-grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
-gap:15px;
-padding:15px;
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(230px,1fr));
+  gap:20px;
+  max-width:1100px;
+  margin:0 auto;
+  padding:16px 20px 32px;
 }
-
 .card{
-background:white;
-border-radius:12px;
-padding:10px;
-box-shadow:0 4px 10px rgba(0,0,0,0.15);
-transition:0.2s;
+  background:var(--cream);
+  border-radius:12px;
+  padding:16px;
+  text-align:center;
+  display:flex;
+  flex-direction:column;
 }
-
-.card:hover{
-transform:scale(1.02);
-}
-
 .card img{
-width:100%;
-height:150px;
-object-fit:contain;
-background:#fff;
+  width:100%;
+  height:180px;
+  object-fit:contain;
+  background:#fff;
+  border-radius:8px;
 }
-
-.price{
-font-weight:bold;
-color:#8b0000;
-font-size:18px;
-margin-top:5px;
+.card h3{
+  font-family:'Playfair Display',serif;
+  font-size:18px;
+  line-height:1.3;
+  margin:14px 0 4px;
 }
-
-.stock{
-font-size:13px;
-margin-top:3px;
-}
-
+.card select{margin-top:8px}
+.price{font-weight:700;color:var(--deep);font-size:18px;margin-top:6px}
+.stock{font-size:13px;margin-top:4px;color:var(--soft)}
 .btn{
-margin-top:8px;
-width:100%;
-padding:10px;
-background:black;
-color:white;
-border:none;
-border-radius:8px;
-cursor:pointer;
-transition:0.2s;
+  margin-top:auto;
+  width:100%;
+  padding:11px;
+  background:var(--deep);
+  color:#fff;
+  border:none;
+  border-radius:999px;
+  cursor:pointer;
+  font-weight:600;
+  transition:background .2s;
 }
+.card .btn{margin-top:12px}
+.btn:hover{background:var(--accent)}
 
-.btn:hover{
-background:#333;
-}
-
-
-
-/* CARRINHO */
-
+/* PAINEL DO CARRINHO */
 .cartPanel{
-position:fixed;
-top:0;
-right:0;
-width:320px;
-height:100%;
-background:#faf8f8;
-padding:15px;
-box-shadow:-5px 0 15px rgba(0,0,0,0.4);
-display:none;
-z-index:100;
-overflow-y:auto;
+  position:fixed;
+  top:0;
+  right:0;
+  width:340px;
+  max-width:100%;
+  height:100%;
+  background:var(--bg);
+  padding:70px 18px 18px;
+  box-shadow:-5px 0 15px rgba(0,0,0,.35);
+  display:none;
+  z-index:1000;
+  overflow-y:auto;
 }
-
-.cartHeader{
-display:flex;
-justify-content:space-between;
-align-items:center;
-}
-
-.closeBtn{
-background:#eee;
-border:none;
-padding:6px 10px;
-border-radius:5px;
-cursor:pointer;
-}
-
-.cartItem{
-display:flex;
-justify-content:space-between;
-align-items:center;
-margin:10px 0;
-}
-
-.qtyControls{
-display:flex;
-align-items:center;
-gap:5px;
-}
-
+.cartHeader{display:flex;justify-content:space-between;align-items:center}
+.closeBtn{background:var(--cream);border:none;padding:6px 10px;border-radius:6px;cursor:pointer}
+.cartItem{display:flex;justify-content:space-between;align-items:center;margin:10px 0;gap:8px}
+.qtyControls{display:flex;align-items:center;gap:5px}
 .qtyBtn{
-background:#7b3fa0;
-color:white;
-border:none;
-width:28px;
-height:28px;
-border-radius:6px;
-cursor:pointer;
+  background:var(--deep);
+  color:#fff;
+  border:none;
+  width:28px;
+  height:28px;
+  border-radius:50%;
+  cursor:pointer;
 }
-
 .removeBtn{
-background:#f70707;
-border:none;
-color:white;
-width:28px;
-height:28px;
-border-radius:6px;
-cursor:pointer;
+  background:#fff;
+  border:1px solid var(--accent);
+  color:var(--accent);
+  width:28px;
+  height:28px;
+  border-radius:50%;
+  cursor:pointer;
 }
-
-select, textarea{
-width:100%;
-margin-top:8px;
-padding:8px;
-border-radius:6px;
-border:1px solid #ccc;
+select,textarea{
+  width:100%;
+  margin-top:8px;
+  padding:9px;
+  border-radius:8px;
+  border:1px solid var(--muted);
+  background:#fff;
+  font-family:inherit;
 }
-
 .instagramBtn{
-width:100%;
-padding:10px;
-background:#800000;
-color:white;
-border:none;
-border-radius:6px;
-margin-top:8px;
-cursor:pointer;
+  width:100%;
+  padding:10px;
+  background:var(--deep);
+  color:#fff;
+  border:none;
+  border-radius:999px;
+  margin-top:8px;
+  cursor:pointer;
 }
-
 .totalBox{
-color:#800000;
-font-weight:bold;
-font-size:20px;
-padding:6px 10px;
-border-radius:8px;
-display:inline-block;
+  font-family:'Playfair Display',serif;
+  color:var(--deep);
+  font-weight:700;
+  font-size:22px;
+  margin:4px 0;
+  display:inline-block;
 }
 
 #btnTopo{
   position:fixed;
-  bottom:10px;
-  right:10px;
-  width:40px;
-  height:40px;
+  bottom:12px;
+  right:12px;
+  width:42px;
+  height:42px;
   border:none;
   border-radius:50%;
-  background:#800000;
-  color:white;
-  font-size:22px;
+  background:var(--deep);
+  color:#fff;
+  font-size:20px;
   cursor:pointer;
   z-index:9999;
   display:none;
   box-shadow:0 4px 12px rgba(0,0,0,.25);
 }
+#btnTopo:hover{transform:scale(1.05)}
 
-#btnTopo:hover{
-  transform:scale(1.05);
+/* CELULAR */
+@media (max-width:700px){
+  .hero{padding:0 14px}
+  .hero-card{grid-template-columns:1fr}
+  .hero-right{order:-1;min-height:190px}
+  .hero-image{
+    -webkit-mask-image:linear-gradient(to bottom,#000 55%,transparent 100%);
+    mask-image:linear-gradient(to bottom,#000 55%,transparent 100%);
+  }
+  .hero-left{padding:8px 26px 28px}
+  .catalogoTopo{padding:14px 14px 0}
+  .destaques{padding:16px 14px 0}
+  .fitaOferta{width:92px;height:92px}
+  .fitaOferta span{top:18px;left:-34px;width:130px;font-size:10px;padding:4px 0}
+  .grid{grid-template-columns:repeat(2,1fr);gap:12px;padding:14px 14px 28px}
+  .card{padding:10px}
+  .card img{height:130px}
+  .card h3{font-size:15px}
+  .cartPanel{width:100%}
 }
-
-/* Titulo */
-
-.titulo{
-font-size:clamp(15px, 4vw, 24px);
-font-weight:bold;
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  .bannerTextoPulsando{animation:none}
+  .cartBtn,.btn{transition:none}
 }
 
 </style>
@@ -303,11 +376,11 @@ font-weight:bold;
 
 <header>
   <div class="logoArea">
-    <img src="imagens/00/Logo.jpg" class="logo" id="logoLoja">
-    <b class="titulo">Catálogo Bárbara Emily</b>
+    <img src="imagens/00/Logo.jpg" class="logo" id="logoLoja" alt="Logo Bárbara Emily">
+    <b class="titulo">BÁRBARA EMILY</b>
   </div>
 
-  <button class="cartBtn" onclick="toggleCarrinho()">
+  <button class="cartBtn" onclick="toggleCarrinho()" aria-label="Abrir carrinho">
     🛒
     <span id="cartBadge">0</span>
   </button>
@@ -317,13 +390,32 @@ font-weight:bold;
   <span id="textoBanner"></span>
 </div>
 
+
+<section class="hero" id="heroLoja">
+  <div class="hero-card">
+  <div class="hero-left">
+    <h1 class="hero-brand" id="heroTitulo">Beleza com identidade.</h1>
+    <p class="hero-tag" id="heroSubtitulo">Escolha seus produtos e finalize o pedido pelo carrinho.</p>
+    <a class="hero-cta" id="heroBotao" href="#produtosContainer">Ver produtos</a>
+  </div>
+  <div class="hero-right">
+    <img src="imagens/00/01.png" alt="" class="hero-image"
+         onerror="this.closest('.hero').classList.add('sem-foto')">
+  </div>
+  </div>
+</section>
+
+<section class="destaques" id="destaquesLoja" hidden>
+  <h2 id="destaquesTitulo">Produtos em destaque</h2>
+  <div class="grid" id="destaquesContainer"></div>
+</section>
+
 <!-- PRODUTOS AUTOMÁTICOS -->
 
-<div style="padding:15px;">
+<div class="catalogoTopo">
   <input
     id="buscaCliente"
     placeholder="🔍 Buscar produto..."
-    style="width:100%; padding:10px; border:1px solid #ccc; border-radius:8px; margin-bottom:12px;"
     oninput="filtrarProdutosCliente()"
   >
 
@@ -345,6 +437,8 @@ font-weight:bold;
 <!-- CARRINHO -->
 
 <div id="cartPanel" class="cartPanel">
+
+<button type="button" class="closeBtn" onclick="toggleCarrinho()" style="position:absolute;top:18px;left:18px;">← Continuar comprando</button>
 
 <p class="totalBox">Total: R$ <span id="total">0.00</span></p>
 
@@ -373,7 +467,7 @@ font-weight:bold;
     Via Uber flash (por conta do cliente)
   </option>
 
-  <==option value="loja">
+  <option value="loja">
     Entrega pela loja
   </option>
 </select>
@@ -488,6 +582,7 @@ let taxaEntregaBairro = 0;
 let categoriaFiltroCliente = "todos";
 let unsubscribePedidosAdmin = null;
 let statusFiltroPedidosAtual = "todos";
+let buscaPedidosAdminTimer = null;
 
 let configLoja = {
   descontoPix: 5,
@@ -505,8 +600,26 @@ let configLoja = {
     texto: "",
     corFundo: "#FFD700",
     corTexto: "#000000"
+  },
+
+  destaquesProdutos: {
+    ativo: true,
+    titulo: "Produtos em destaque"
+  },
+
+  destaque: {
+    ativo: true,
+    titulo: "Beleza com identidade.",
+    subtitulo: "Escolha seus produtos e finalize o pedido pelo carrinho.",
+    textoBotao: "Ver produtos",
+    imagemAtiva: false,
+    imagemDados: "",
+    imagemAjuste: "cover"
   }
 };
+
+// Imagem escolhida no painel e ainda não salva (null = sem alteração, "" = remover)
+let heroImagemPendente = null;
 
 // 🔐 login admin
 let adminLogado = false;
@@ -752,7 +865,7 @@ function gerarProdutos() {
           <div style="
             position:absolute;
             top:8px;
-            left:8px;
+            ${p.promocao ? "right:8px; justify-content:flex-end;" : "left:8px;"}
             display:flex;
             flex-wrap:wrap;
             gap:5px;
@@ -760,8 +873,8 @@ function gerarProdutos() {
           ">
             ${categoriasDestaque.map(c => `
               <span style="
-                background:#800000;
-                color:black;
+                background:#5b0f18;
+                color:#fff;
                 padding:6px 10px;
                 border-radius:5px;
                 font-size:12px;
@@ -777,17 +890,20 @@ function gerarProdutos() {
 
       html += `
         <div class="card"
+          data-id="${p.id}"
           data-nome="${(p.nome || "").toLowerCase()}"
           data-categoria="${(p.categoria || "sem categoria").toLowerCase()}"
           data-categorias="${obterCategoriasProduto(p).map(c => c.toLowerCase()).join("|")}">
 
-          <div style="position:relative;">
+          <div class="imgBox">
             <img
               id="img${idTela}"
               src="imagens/${p.pasta || ""}/${p.imagem || ""}"
               loading="lazy"
               decoding="async"
               onerror="this.onerror=null;this.src='imagens/sem-imagem.jpg'">
+
+            ${p.promocao ? `<div class="fitaOferta"><span>Oferta especial</span></div>` : ""}
 
             ${tarjasHTML}
           </div>
@@ -844,6 +960,7 @@ function gerarProdutos() {
 
   });
   container.innerHTML = html;
+  renderDestaques();
 }
 
 window.mostrarBairrosEntrega = function() {
@@ -909,7 +1026,256 @@ window.addEventListener("scroll", () => {
 
 }, { passive: true });
 
+function produtoTemEstoqueTela(p) {
+  const e = p.estoque;
+  if (typeof e === "number") return e > 0;
+  if (e && typeof e === "object") {
+    return Object.values(e).some(v => Number(v) > 0);
+  }
+  return false;
+}
+
+function renderDestaques() {
+  const secao = document.getElementById("destaquesLoja");
+  const box = document.getElementById("destaquesContainer");
+  if (!secao || !box) return;
+
+  const cfg = configLoja.destaquesProdutos || {};
+
+  const lista = produtos.filter(p =>
+    p && p.destaque === true &&
+    p.ativo !== false &&
+    p.nome && p.preco != null
+  );
+
+  if (cfg.ativo === false || lista.length === 0) {
+    secao.hidden = true;
+    box.innerHTML = "";
+    return;
+  }
+
+  document.getElementById("destaquesTitulo").textContent =
+    cfg.titulo || "Produtos em destaque";
+
+  box.innerHTML = "";
+
+  lista.forEach(p => {
+    const temOpcoes = Array.isArray(p.opcoes) && p.opcoes.length > 0;
+    const temEstoque = produtoTemEstoqueTela(p);
+    const usaLive = produtoPodeUsarPrecoLive(p);
+
+    const card = document.createElement("div");
+    card.className = "card";
+
+    const caixaImg = document.createElement("div");
+    caixaImg.className = "imgBox";
+
+    const img = document.createElement("img");
+    img.loading = "lazy";
+    img.alt = p.nome;
+    img.src = `imagens/${p.pasta || ""}/${p.imagem || ""}`;
+    img.onerror = function () {
+      this.onerror = null;
+      this.src = "imagens/sem-imagem.jpg";
+    };
+
+    const titulo = document.createElement("h3");
+    titulo.textContent = p.marca ? `${p.nome} - ${p.marca}` : p.nome;
+
+    const preco = document.createElement("div");
+    preco.className = "price";
+    if (usaLive) {
+      preco.textContent = `R$ ${Number(p.precoLive).toFixed(2)}`;
+    } else {
+      preco.textContent = `R$ ${Number(p.preco).toFixed(2)}`;
+    }
+
+    const botao = document.createElement("button");
+    botao.type = "button";
+    botao.className = "btn";
+
+    if (!temEstoque) {
+      botao.textContent = "Esgotado";
+      botao.disabled = true;
+    } else if (temOpcoes) {
+      botao.textContent = "Escolher opção";
+      botao.addEventListener("click", () => irParaProduto(p.id));
+    } else {
+      botao.textContent = "Adicionar";
+      botao.addEventListener("click", () => window.addProduto(p.id, null));
+    }
+
+    caixaImg.appendChild(img);
+
+    if (p.promocao) {
+      const fita = document.createElement("div");
+      fita.className = "fitaOferta";
+      const txt = document.createElement("span");
+      txt.textContent = "Oferta especial";
+      fita.appendChild(txt);
+      caixaImg.appendChild(fita);
+    }
+
+    card.append(caixaImg, titulo, preco, botao);
+    box.appendChild(card);
+  });
+
+  secao.hidden = false;
+}
+
+// Leva o cliente até o card completo do produto (onde escolhe a opção)
+function irParaProduto(id) {
+  const busca = document.getElementById("buscaCliente");
+  if (busca) busca.value = "";
+  window.filtrarCategoriaCliente("todos");
+
+  const alvo = document.querySelector(
+    `#produtosContainer .card[data-id="${CSS.escape(id)}"]`
+  );
+  if (!alvo) return;
+
+  alvo.scrollIntoView({ behavior: "smooth", block: "center" });
+  alvo.classList.add("realce");
+  setTimeout(() => alvo.classList.remove("realce"), 2000);
+}
+
+function atualizarHeroLoja() {
+  const hero = document.getElementById("heroLoja");
+  if (!hero) return;
+
+  const d = configLoja.destaque || {};
+
+  if (d.ativo === false) {
+    hero.style.display = "none";
+    return;
+  }
+
+  hero.style.display = "";
+
+  document.getElementById("heroTitulo").textContent = d.titulo || "";
+  document.getElementById("heroSubtitulo").textContent = d.subtitulo || "";
+
+  const botao = document.getElementById("heroBotao");
+  botao.textContent = d.textoBotao || "";
+  botao.style.display = d.textoBotao ? "" : "none";
+
+  // Imagem: a da promoção (se ativada) ou a foto padrão da loja
+  const img = hero.querySelector(".hero-image");
+  if (img) {
+    const usaPromo = Boolean(d.imagemAtiva && d.imagemDados);
+    const origem = usaPromo ? d.imagemDados : "imagens/00/01.png";
+
+    if (img.getAttribute("src") !== origem) {
+      hero.classList.remove("sem-foto");
+      img.src = origem;
+    }
+
+    hero.classList.toggle(
+      "img-inteira",
+      usaPromo && d.imagemAjuste === "contain"
+    );
+  }
+}
+
+// Reduz a imagem e converte para JPEG leve (cabe no documento de configuração)
+function comprimirImagemDestaque(arquivo) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(arquivo);
+    const imagem = new Image();
+
+    imagem.onload = () => {
+      URL.revokeObjectURL(url);
+
+      const limiteChars = 120 * 1024 * 1.37; // ~120 KB em base64
+      let largura = Math.min(900, imagem.naturalWidth);
+
+      for (let tentativa = 0; tentativa < 8; tentativa++) {
+        const altura = Math.round(imagem.naturalHeight * (largura / imagem.naturalWidth));
+        const canvas = document.createElement("canvas");
+        canvas.width = largura;
+        canvas.height = altura;
+
+        const ctx = canvas.getContext("2d");
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, largura, altura);
+        ctx.drawImage(imagem, 0, 0, largura, altura);
+
+        for (let q = 0.85; q >= 0.45; q -= 0.1) {
+          const dados = canvas.toDataURL("image/jpeg", q);
+          if (dados.length <= limiteChars) {
+            resolve(dados);
+            return;
+          }
+        }
+
+        largura = Math.round(largura * 0.8);
+      }
+
+      reject(new Error("Não foi possível reduzir a imagem o suficiente."));
+    };
+
+    imagem.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error("Arquivo de imagem inválido."));
+    };
+
+    imagem.src = url;
+  });
+}
+
+function mostrarPreviewImagemAdmin(origem) {
+  const caixa = document.getElementById("heroImagemPreviewBox");
+  const img = document.getElementById("heroImagemPreviewAdmin");
+  if (!caixa || !img) return;
+
+  if (origem) {
+    img.src = origem;
+    caixa.style.display = "block";
+  } else {
+    img.removeAttribute("src");
+    caixa.style.display = "none";
+  }
+}
+
+async function escolherImagemDestaqueAdmin(evento) {
+  const arquivo = evento.target.files && evento.target.files[0];
+  const status = document.getElementById("heroImagemStatusAdmin");
+  if (!arquivo) return;
+
+  if (!arquivo.type.startsWith("image/")) {
+    alert("Escolha um arquivo de imagem (JPG, PNG ou WEBP).");
+    evento.target.value = "";
+    return;
+  }
+
+  status.textContent = "Preparando imagem...";
+
+  try {
+    heroImagemPendente = await comprimirImagemDestaque(arquivo);
+    mostrarPreviewImagemAdmin(heroImagemPendente);
+    status.textContent = "Imagem pronta. Clique em \"Salvar configuração\" para publicar.";
+  } catch (erro) {
+    console.error("Erro ao preparar imagem:", erro);
+    status.textContent = "";
+    alert("Não foi possível usar essa imagem. Tente outra.");
+  }
+
+  evento.target.value = "";
+}
+
+window.removerImagemDestaqueAdmin = function () {
+  heroImagemPendente = "";
+  mostrarPreviewImagemAdmin("");
+  document.getElementById("heroImagemAtivaAdmin").checked = false;
+  document.getElementById("heroImagemStatusAdmin").textContent =
+    "Imagem removida. Clique em \"Salvar configuração\" para confirmar.";
+};
+
 function atualizarBannerAviso() {
+
+  // também atualiza a faixa de destaque e os produtos em destaque
+  atualizarHeroLoja();
+  renderDestaques();
 
   const banner = document.getElementById("bannerAviso");
 
@@ -1263,7 +1629,7 @@ if (pagamento === "PIX" && subtotalElegivelPix >= minimoPix) {
       ${
         pagamento === "PIX" && subtotalElegivelPix < minimoPix
           ? `<div style="color:#8b0000;">
-              Desconto no PIX acima de R$ ${minimoPix.toFixed(2)} Exceto promoções
+              Desconto no PIX acima de R$ ${minimoPix.toFixed(2)} Exceto produtos em oferta
             </div>`
           : ""
       }
@@ -1985,77 +2351,7 @@ async function salvarPedidoFirebaseComDesconto(
 }
 
 
-window.abrirPedidosAdmin = function () {
-  let html = `
-    <h2>📦 Pedidos</h2>
-    <div id="listaPedidosAdmin">Carregando...</div>
-  `;
 
-  painelAdmin.innerHTML += html;
-
-  const pedidosRef = query(
-    collection(db, "Pedidos"),
-    orderBy("criadoEm", "desc")
-  );
-
-  snapshot.forEach(docSnap => {
-
-    let pedido = docSnap.data();
-
-    if (pedido.status !== "concluido") {
-      pedidosPendentes++;
-      return;
-    }
-
-    if (!pedido.criadoEm) return;
-
-    let dataPedido = pedido.criadoEm.toDate();
-
-    let incluir = true;
-
-    if (periodo === "hoje") {
-
-      incluir =
-        dataPedido.getDate() === agora.getDate() &&
-        dataPedido.getMonth() === agora.getMonth() &&
-        dataPedido.getFullYear() === agora.getFullYear();
-
-    } else if (periodo === "7dias") {
-
-      let limite = new Date();
-      limite.setDate(limite.getDate() - 7);
-
-      incluir = dataPedido >= limite;
-
-    } else if (periodo === "30dias") {
-
-      let limite = new Date();
-      limite.setDate(limite.getDate() - 30);
-
-      incluir = dataPedido >= limite;
-    }
-
-    if (!incluir) return;
-
-    totalPedidos++;
-    faturamento += Number(pedido.total || 0);
-
-    let itensPedido = Array.isArray(pedido.itens)
-      ? pedido.itens
-      : [];
-
-    itensPedido.forEach(item => {
-
-      let nome = item.nome || "Produto";
-
-      let qtd = Number(item.qtd || 0);
-
-      produtosVendidos[nome] =
-        (produtosVendidos[nome] || 0) + qtd;
-    });
-
-  });
-};
 
 function gerarMensagemStatusPedido(pedido, novoStatus) {
 
@@ -2469,19 +2765,6 @@ function atualizarSelect(selectId, stockId) {
   }
 }
 
-async function marcarReservaExpirada(item) {
-  if (!item.reservaId) return;
-
-  try {
-    await updateDoc(doc(db, "Reservas", item.reservaId), {
-      status: "expirada",
-      expiradoEmMs: Date.now()
-    });
-  } catch (erro) {
-    console.warn("Não foi possível marcar a reserva como expirada:", erro);
-  }
-}
-
 async function expirarReserva(item) {
   if (!item || !item.produtoId) return;
 
@@ -2796,6 +3079,81 @@ window.renderDashboardAdmin = function () {
       <label>Cor do texto</label>
       <input type="color" id="bannerCorTexto">
 
+      <hr style="margin:18px 0;">
+
+      <h4 style="margin:0 0 8px;">Área de produtos em destaque</h4>
+
+      <label style="display:block;margin-top:10px;">
+        <input type="checkbox" id="destaquesAtivoAdmin">
+        Mostrar produtos em destaque na loja
+      </label>
+
+      <label style="display:block; margin-top:10px;">
+        Título da área:
+        <input type="text" id="destaquesTituloAdmin" maxlength="50" style="width:100%; margin-top:6px;">
+      </label>
+
+      <p style="font-size:13px; color:#666; margin:8px 0 0;">
+        Para escolher quais produtos aparecem, marque a caixa "Produto em destaque" na edição de cada produto.
+      </p>
+
+      <hr style="margin:18px 0;">
+
+      <h4 style="margin:0 0 8px;">Faixa de destaque (topo da loja)</h4>
+
+      <label style="display:block;margin-top:10px;">
+        <input type="checkbox" id="heroAtivoAdmin">
+        Mostrar faixa de destaque
+      </label>
+
+      <label style="display:block; margin-top:10px;">
+        Título:
+        <input type="text" id="heroTituloAdmin" maxlength="80" style="width:100%; margin-top:6px;">
+      </label>
+
+      <label style="display:block; margin-top:10px;">
+        Texto abaixo do título:
+        <textarea id="heroSubtituloAdmin" rows="2" maxlength="160" style="width:100%; margin-top:6px;"></textarea>
+      </label>
+
+      <label style="display:block; margin-top:10px;">
+        Texto do botão (deixe vazio para esconder):
+        <input type="text" id="heroBotaoAdmin" maxlength="30" style="width:100%; margin-top:6px;">
+      </label>
+
+      <h4 style="margin:18px 0 8px;">Imagem da promoção</h4>
+
+      <label style="display:block;margin-top:6px;">
+        <input type="checkbox" id="heroImagemAtivaAdmin">
+        Mostrar imagem da promoção na faixa
+      </label>
+
+      <p style="font-size:13px; color:#666; margin:6px 0;">
+        Desligada, a loja volta a mostrar a foto padrão.
+      </p>
+
+      <input type="file" id="heroImagemArquivoAdmin" accept="image/*" style="margin-top:6px;">
+
+      <div id="heroImagemPreviewBox" style="display:none; margin-top:8px;">
+        <img id="heroImagemPreviewAdmin" alt="Prévia da imagem"
+             style="max-width:100%; max-height:180px; border-radius:8px; border:1px solid #ddd;">
+        <div>
+          <button type="button" onclick="removerImagemDestaqueAdmin()" style="margin-top:6px;">
+            Remover imagem
+          </button>
+        </div>
+      </div>
+
+      <label style="display:block; margin-top:10px;">
+        Como mostrar a imagem:
+        <select id="heroImagemAjusteAdmin" style="width:100%; margin-top:6px;">
+          <option value="cover">Preencher o espaço (pode cortar as bordas)</option>
+          <option value="contain">Mostrar inteira (pode sobrar espaço)</option>
+        </select>
+      </label>
+
+      <p id="heroImagemStatusAdmin" style="font-size:13px; color:#555; margin:6px 0;"></p>
+
       <div style="margin-top:10px;">
         <button onclick="salvarConfigLoja()">Salvar configuração</button>
       </div>
@@ -2825,6 +3183,29 @@ window.renderDashboardAdmin = function () {
 
   document.getElementById("liveAtivaAdmin").checked =
     configLoja.liveAtiva || false;
+
+  document.getElementById("destaquesAtivoAdmin").checked =
+    configLoja.destaquesProdutos?.ativo !== false;
+  document.getElementById("destaquesTituloAdmin").value =
+    configLoja.destaquesProdutos?.titulo ?? "Produtos em destaque";
+
+  document.getElementById("heroAtivoAdmin").checked =
+    configLoja.destaque?.ativo !== false;
+  document.getElementById("heroTituloAdmin").value =
+    configLoja.destaque?.titulo ?? "";
+  document.getElementById("heroSubtituloAdmin").value =
+    configLoja.destaque?.subtitulo ?? "";
+  document.getElementById("heroBotaoAdmin").value =
+    configLoja.destaque?.textoBotao ?? "";
+
+  heroImagemPendente = null;
+  document.getElementById("heroImagemAtivaAdmin").checked =
+    configLoja.destaque?.imagemAtiva === true;
+  document.getElementById("heroImagemAjusteAdmin").value =
+    configLoja.destaque?.imagemAjuste === "contain" ? "contain" : "cover";
+  mostrarPreviewImagemAdmin(configLoja.destaque?.imagemDados || "");
+  document.getElementById("heroImagemArquivoAdmin")
+    .addEventListener("change", escolherImagemDestaqueAdmin);
 
   document.getElementById("bannerCorFundo").value =
     configLoja.bannerAviso?.corFundo || "#FFD700";
@@ -2876,6 +3257,17 @@ window.salvarConfigLoja = async function () {
       return;
     }
 
+    const heroImagemAtiva =
+      document.getElementById("heroImagemAtivaAdmin").checked;
+    const heroImagemFinal = heroImagemPendente !== null
+      ? heroImagemPendente
+      : (configLoja.destaque?.imagemDados || "");
+
+    if (heroImagemAtiva && !heroImagemFinal) {
+      alert("Escolha uma imagem antes de ativar a imagem da promoção.");
+      return;
+    }
+
     configLoja.descontoPix = desconto;
     configLoja.minimoPix = minimo;
 
@@ -2891,6 +3283,21 @@ window.salvarConfigLoja = async function () {
       corFundo: document.getElementById("bannerCorFundo").value,
       corTexto: document.getElementById("bannerCorTexto").value,
       pulsar: document.getElementById("bannerPulsar").checked
+    };
+
+    configLoja.destaquesProdutos = {
+      ativo: document.getElementById("destaquesAtivoAdmin").checked,
+      titulo: document.getElementById("destaquesTituloAdmin").value.trim() || "Produtos em destaque"
+    };
+
+    configLoja.destaque = {
+      ativo: document.getElementById("heroAtivoAdmin").checked,
+      titulo: document.getElementById("heroTituloAdmin").value.trim(),
+      subtitulo: document.getElementById("heroSubtituloAdmin").value.trim(),
+      textoBotao: document.getElementById("heroBotaoAdmin").value.trim(),
+      imagemAtiva: heroImagemAtiva,
+      imagemDados: heroImagemFinal,
+      imagemAjuste: document.getElementById("heroImagemAjusteAdmin").value
     };
 
     console.log("DADOS:", configLoja);
@@ -2929,6 +3336,10 @@ window.salvarConfigLoja = async function () {
     );
 
     console.log("SALVOU NO FIREBASE");
+
+    heroImagemPendente = null;
+    const statusImg = document.getElementById("heroImagemStatusAdmin");
+    if (statusImg) statusImg.textContent = "";
 
     atualizarBannerAviso();
 
@@ -3207,8 +3618,8 @@ window.renderFiltrosCategoriaCliente = function () {
         style="
           padding:8px 12px;
           border-radius:999px;
-          border:1px solid ${ativo ? "#8b0000" : "#ccc"};
-          background:${ativo ? "#8b0000" : "#fff"};
+          border:1px solid ${ativo ? "#5b0f18" : "#ccc"};
+          background:${ativo ? "#5b0f18" : "#fff"};
           color:${ativo ? "#fff" : "#333"};
           cursor:pointer;
           font-weight:${ativo ? "bold" : "normal"};
@@ -3328,7 +3739,12 @@ window.renderSecaoProdutosAdmin = function () {
 
         <label style="display:flex; align-items:center; gap:8px; margin-top:6px;">
           <input type="checkbox" id="novaPromocao">
-           Produto em promoção
+           Produto em oferta
+        </label>
+
+        <label style="display:flex; align-items:center; gap:8px; margin-top:6px;">
+          <input type="checkbox" id="novoDestaque">
+          ⭐ Produto em destaque
         </label>
       </div>
 
@@ -3449,7 +3865,12 @@ window.renderSecaoProdutosAdmin = function () {
 
           <label style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
             <input type="checkbox" id="p_promocao_${index}" ${p.promocao ? "checked" : ""}>
-            Produto em promoção
+            Produto em oferta
+          </label>
+
+          <label style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+            <input type="checkbox" id="p_destaque_${index}" ${p.destaque ? "checked" : ""}>
+            ⭐ Produto em destaque
           </label>
 
           <label style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
@@ -3733,7 +4154,12 @@ function mostrarHistoricoWhatsapp(pedido){
 }
 
 window.buscarPedidosAdmin = function () {
-  window.filtrarPedidosAdmin(statusFiltroPedidosAtual);
+  // Aguarda uma pausa na digitação antes de atualizar a consulta do Firestore.
+  clearTimeout(buscaPedidosAdminTimer);
+
+  buscaPedidosAdminTimer = setTimeout(() => {
+    window.filtrarPedidosAdmin(statusFiltroPedidosAtual);
+  }, 300);
 };
 
 window.filtrarPedidosAdmin = function (statusFiltro = "todos") {
@@ -4065,6 +4491,7 @@ window.criarProduto = async function () {
   let pasta = document.getElementById("novo_pasta").value.trim() || "";
   let imagem = document.getElementById("novo_imagem").value.trim() || "";
   let promocao = document.getElementById("novaPromocao").checked;
+  let destaque = document.getElementById("novoDestaque")?.checked || false;
 
   let opcoesTexto = document.getElementById("novo_opcoes").value.trim();
   let opcoes = opcoesTexto
@@ -4097,6 +4524,7 @@ window.criarProduto = async function () {
     categoria,
     categoriasAdicionais,
     promocao,
+    destaque,
     preco,
     ativo: true,
     liveAtivo: false,
@@ -4140,6 +4568,7 @@ window.salvarEdicaoProdutos = async function () {
         )
       ];
       let promocao = document.getElementById(`p_promocao_${index}`)?.checked || false;
+      let destaque = document.getElementById(`p_destaque_${index}`)?.checked || false;
       let ativo =
         document.getElementById(`p_ativo_${index}`)?.checked ?? true;
       let liveAtivo =
@@ -4180,6 +4609,7 @@ window.salvarEdicaoProdutos = async function () {
         categoria,
         categoriasAdicionais,
         promocao,
+        destaque,
         ativo,
         preco,
         liveAtivo,
@@ -4200,6 +4630,7 @@ window.salvarEdicaoProdutos = async function () {
         categoria: item.categoria,
         categoriasAdicionais: item.categoriasAdicionais,
         promocao: item.promocao,
+        destaque: item.destaque,
         ativo: item.ativo,
         preco: item.preco,
         liveAtivo: item.liveAtivo,
@@ -4252,10 +4683,6 @@ window.fecharAdmin = function () {
     window.painelAdmin.remove();
     window.painelAdmin = null;
   }
-};
-
-window.salvarAdmin = function () {
-  alert("O estoque ainda não está online nesta etapa.");
 };
 
 window.onload = async function () {
